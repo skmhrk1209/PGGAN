@@ -24,8 +24,9 @@ class Model(object):
         )
     )
 
-    def __init__(self, dataset, generator, discriminator, hyper_param):
+    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param):
 
+        self.model_dir = model_dir
         self.dataset = dataset
         self.generator = generator
         self.discriminator = discriminator
@@ -97,11 +98,11 @@ class Model(object):
 
         self.saver = tf.train.Saver()
 
-    def initialize(self, model_dir):
+    def initialize(self):
 
         session = tf.get_default_session()
 
-        checkpoint = tf.train.latest_checkpoint(model_dir)
+        checkpoint = tf.train.latest_checkpoint(self.model_dir)
 
         if checkpoint:
             self.saver.restore(session, checkpoint)
@@ -185,7 +186,7 @@ class Model(object):
 
                     checkpoint = self.saver.save(
                         sess=session,
-                        save_path=os.path.join(model_dir, "model.ckpt"),
+                        save_path=os.path.join(self.model_dir, "model.ckpt"),
                         global_step=generator_global_step
                     )
 

@@ -65,6 +65,7 @@ class Dataset(dataset.Dataset):
 
 gan_models = {
     "SNDCGAN_0": gan.Model(
+        model_dir=args.model_dir,
         dataset=Dataset([64, 64], args.data_format),
         generator=sndcgan.Generator(
             image_size=[64, 64],
@@ -126,7 +127,7 @@ gan_models = {
 
 with tf.Session() as session:
 
-    gan_models["SNDCGAN_0"].initialize(args.model_dir)
+    gan_models["SNDCGAN_0"].initialize()
     #gan_models["SNDCGAN_1"].reinitialize()
 
     if args.train:
