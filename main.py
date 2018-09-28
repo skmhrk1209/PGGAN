@@ -92,11 +92,7 @@ gan_models = {
             beta2=0.999
         )
     ),
-    
-}
-
-'''
-"SNDCGAN_1": gan.Model(
+    "SNDCGAN_1": gan.Model(
         model_dir=args.model_dir,
         dataset=Dataset([128, 128], args.data_format),
         generator=sndcgan.Generator(
@@ -126,16 +122,16 @@ gan_models = {
             beta2=0.999
         )
     )
-    '''
+}
 
 with tf.Session() as session:
 
     gan_models["SNDCGAN_0"].initialize()
-    #gan_models["SNDCGAN_1"].reinitialize()
+    gan_models["SNDCGAN_1"].reinitialize()
 
     if args.train:
 
-        gan_models["SNDCGAN_0"].train(
+        gan_models["SNDCGAN_1"].train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
