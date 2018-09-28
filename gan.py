@@ -40,10 +40,10 @@ class Model(object):
         self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
         self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_param.latent_size])
 
-        self.fakes = self.generator(inputs=self.latents, training=self.training, reuse=False)
+        self.fakes = self.generator(inputs=self.latents, training=self.training, reuse=tf.AUTO_REUSE)
 
-        self.real_logits = self.discriminator(inputs=self.reals, training=self.training, reuse=False)
-        self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, reuse=True)
+        self.real_logits = self.discriminator(inputs=self.reals, training=self.training, reuse=tf.AUTO_REUSE)
+        self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, reuse=tf.AUTO_REUSE)
 
         self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
@@ -101,9 +101,6 @@ class Model(object):
 
         with tf.Session() as session:
 
-            session.run(tf.local_variables_initializer())
-            print("local variables initialized")
-
             checkpoint = tf.train.latest_checkpoint(model_dir)
 
             if checkpoint:
@@ -129,6 +126,9 @@ class Model(object):
     def train(self, filenames, batch_size, num_epochs, buffer_size, config):
 
         with tf.Session(config=config) as session:
+
+            session.run(tf.local_variables_initializer())
+            print("local variables initialized")
 
             try:
 
