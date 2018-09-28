@@ -118,7 +118,7 @@ class Model(object):
 
         with tf.Session() as session:
 
-            tf.get_variable_scope().reuse()
+            tf.get_variable_scope().reuse_variables()
 
             uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
             uninitialized_variables = [tf.get_variable(name) for name in uninitialized_variable_names]
