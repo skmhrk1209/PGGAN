@@ -102,7 +102,7 @@ class Model(object):
 
     def initialize(self):
 
-        session = tf.get_default_session()
+        
 
         checkpoint = tf.train.latest_checkpoint(self.model_dir)
 
@@ -116,15 +116,14 @@ class Model(object):
 
     def reinitialize(self):
 
-        with tf.Session() as session:
+        session = tf.get_default_session()
+        tf.get_variable_scope().reuse_variables()
 
-            tf.get_variable_scope().reuse_variables()
+        uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
+        uninitialized_variables = [tf.get_variable(name) for name in uninitialized_variable_names]
 
-            uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
-            uninitialized_variables = [tf.get_variable(name) for name in uninitialized_variable_names]
-
-            session.run(tf.variables_initializer(uninitialized_variables))
-            print("uninitialized variables initialized")
+        session.run(tf.variables_initializer(uninitialized_variables))
+        print("uninitialized variables initialized")
 
     def train(self, filenames, batch_size, num_epochs, buffer_size, config):
 
