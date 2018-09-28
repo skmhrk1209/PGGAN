@@ -210,9 +210,9 @@ class Model(object):
                                 cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                             )
 
-            except tf.errors.OutOfRangeError:
+        except tf.errors.OutOfRangeError:
 
-                print("training ended")
+            print("training ended")
 
     def predict(self, filenames, batch_size, num_epochs, buffer_size, config):
 
