@@ -90,7 +90,7 @@ gan_models = {
             beta1=0.5,
             beta2=0.999
         )
-    ),
+    )
     '''
     "SNDCGAN_1": gan.Model(
         dataset=Dataset([128, 128], args.data_format),
