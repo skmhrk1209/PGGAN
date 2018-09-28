@@ -102,7 +102,7 @@ class Model(object):
 
     def initialize(self):
 
-        
+        session = tf.get_default_session()
 
         checkpoint = tf.train.latest_checkpoint(self.model_dir)
 
