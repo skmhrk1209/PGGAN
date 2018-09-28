@@ -69,8 +69,8 @@ class Model(object):
             self.gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
 
-            self.generator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="generator")
-            self.discriminator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="discriminator")
+            self.generator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="pggan/generator")
+            self.discriminator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="pggan/discriminator")
 
             self.generator_global_step = tf.Variable(initial_value=0, trainable=False)
             self.discriminator_global_step = tf.Variable(initial_value=0, trainable=False)
