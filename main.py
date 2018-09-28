@@ -91,7 +91,8 @@ gan_models = {
             beta2=0.999
         )
     )
-    '''
+}
+'''
     "SNDCGAN_1": gan.Model(
         dataset=Dataset([128, 128], args.data_format),
         generator=sndcgan.Generator(
@@ -122,7 +123,6 @@ gan_models = {
         )
     )
     '''
-}
 
 gan_models["SNDCGAN_0"].initialize(args.model_dir)
 #gan_models["SNDCGAN_1"].reinitialize()
