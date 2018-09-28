@@ -124,39 +124,41 @@ gan_models = {
     )
     '''
 
-gan_models["SNDCGAN_0"].initialize(args.model_dir)
-#gan_models["SNDCGAN_1"].reinitialize()
+with tf.Session() as session:
 
-if args.train:
+    gan_models["SNDCGAN_0"].initialize(args.model_dir)
+    #gan_models["SNDCGAN_1"].reinitialize()
 
-    gan_models["SNDCGAN_0"].train(
-        filenames=["data/train.tfrecord"],
-        batch_size=args.batch_size,
-        num_epochs=args.num_epochs,
-        buffer_size=args.buffer_size,
-        config=tf.ConfigProto(
-            gpu_options=tf.GPUOptions(
-                visible_device_list=args.gpu,
-                allow_growth=True
-            ),
-            log_device_placement=False,
-            allow_soft_placement=True
+    if args.train:
+
+        gan_models["SNDCGAN_0"].train(
+            filenames=["data/train.tfrecord"],
+            batch_size=args.batch_size,
+            num_epochs=args.num_epochs,
+            buffer_size=args.buffer_size,
+            config=tf.ConfigProto(
+                gpu_options=tf.GPUOptions(
+                    visible_device_list=args.gpu,
+                    allow_growth=True
+                ),
+                log_device_placement=False,
+                allow_soft_placement=True
+            )
         )
-    )
 
-if args.predict:
+    if args.predict:
 
-    gan_models["SNDCGAN"].predict(
-        filenames=["data/test.tfrecord"],
-        batch_size=args.batch_size,
-        num_epochs=args.num_epochs,
-        buffer_size=args.buffer_size,
-        config=tf.ConfigProto(
-            gpu_options=tf.GPUOptions(
-                visible_device_list=args.gpu,
-                allow_growth=True
-            ),
-            log_device_placement=False,
-            allow_soft_placement=True
+        gan_models["SNDCGAN"].predict(
+            filenames=["data/test.tfrecord"],
+            batch_size=args.batch_size,
+            num_epochs=args.num_epochs,
+            buffer_size=args.buffer_size,
+            config=tf.ConfigProto(
+                gpu_options=tf.GPUOptions(
+                    visible_device_list=args.gpu,
+                    allow_growth=True
+                ),
+                log_device_placement=False,
+                allow_soft_placement=True
+            )
         )
-    )

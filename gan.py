@@ -99,17 +99,17 @@ class Model(object):
 
     def initialize(self, model_dir):
 
-        with tf.Session() as session:
+        session = tf.get_default_session()
 
-            checkpoint = tf.train.latest_checkpoint(model_dir)
+        checkpoint = tf.train.latest_checkpoint(model_dir)
 
-            if checkpoint:
-                self.saver.restore(session, checkpoint)
-                print(checkpoint, "loaded")
+        if checkpoint:
+            self.saver.restore(session, checkpoint)
+            print(checkpoint, "loaded")
 
-            else:
-                session.run(tf.global_variables_initializer())
-                print("global variables initialized")
+        else:
+            session.run(tf.global_variables_initializer())
+            print("global variables initialized")
 
     def reinitialize(self):
 
@@ -125,90 +125,90 @@ class Model(object):
 
     def train(self, filenames, batch_size, num_epochs, buffer_size, config):
 
-        with tf.Session(config=config) as session:
+        session = tf.get_default_session()
 
-            session.run(tf.local_variables_initializer())
-            print("local variables initialized")
+        session.run(tf.local_variables_initializer())
+        print("local variables initialized")
 
-            try:
+        try:
 
-                print("training started")
+            print("training started")
 
-                start = time.time()
+            start = time.time()
 
-                self.dataset.initialize(
-                    filenames=filenames,
-                    batch_size=batch_size,
-                    num_epochs=num_epochs,
-                    buffer_size=buffer_size
+            self.dataset.initialize(
+                filenames=filenames,
+                batch_size=batch_size,
+                num_epochs=num_epochs,
+                buffer_size=buffer_size
+            )
+
+            for i in itertools.count():
+
+                feed_dict = {self.batch_size: batch_size}
+
+                reals, latents = session.run(
+                    [self.next_reals, self.next_latents],
+                    feed_dict=feed_dict
                 )
 
-                for i in itertools.count():
+                feed_dict.update({
+                    self.latents: latents,
+                    self.reals: reals,
+                    self.training: True
+                })
 
-                    feed_dict = {self.batch_size: batch_size}
+                session.run(self.generator_train_op, feed_dict=feed_dict)
+                session.run(self.discriminator_train_op, feed_dict=feed_dict)
 
-                    reals, latents = session.run(
-                        [self.next_reals, self.next_latents],
+                if i % 100 == 0:
+
+                    generator_global_step, generator_loss = session.run(
+                        [self.generator_global_step, self.generator_loss],
                         feed_dict=feed_dict
                     )
 
-                    feed_dict.update({
-                        self.latents: latents,
-                        self.reals: reals,
-                        self.training: True
-                    })
+                    print("global_step: {}, generator_loss: {:.2f}".format(
+                        generator_global_step,
+                        generator_loss
+                    ))
 
-                    session.run(self.generator_train_op, feed_dict=feed_dict)
-                    session.run(self.discriminator_train_op, feed_dict=feed_dict)
+                    discriminator_global_step, discriminator_loss = session.run(
+                        [self.discriminator_global_step, self.discriminator_loss],
+                        feed_dict=feed_dict
+                    )
 
-                    if i % 100 == 0:
+                    print("global_step: {}, discriminator_loss: {:.2f}".format(
+                        discriminator_global_step,
+                        discriminator_loss
+                    ))
 
-                        generator_global_step, generator_loss = session.run(
-                            [self.generator_global_step, self.generator_loss],
-                            feed_dict=feed_dict
-                        )
+                    checkpoint = self.saver.save(
+                        sess=session,
+                        save_path=os.path.join(model_dir, "model.ckpt"),
+                        global_step=generator_global_step
+                    )
 
-                        print("global_step: {}, generator_loss: {:.2f}".format(
-                            generator_global_step,
-                            generator_loss
-                        ))
+                    stop = time.time()
 
-                        discriminator_global_step, discriminator_loss = session.run(
-                            [self.discriminator_global_step, self.discriminator_loss],
-                            feed_dict=feed_dict
-                        )
+                    print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
 
-                        print("global_step: {}, discriminator_loss: {:.2f}".format(
-                            discriminator_global_step,
-                            discriminator_loss
-                        ))
+                    start = time.time()
 
-                        checkpoint = self.saver.save(
-                            sess=session,
-                            save_path=os.path.join(model_dir, "model.ckpt"),
-                            global_step=generator_global_step
-                        )
+                    if i % 1000 == 0:
 
-                        stop = time.time()
+                        fakes = session.run(self.fakes, feed_dict=feed_dict)
 
-                        print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
+                        images = np.concatenate([reals, fakes], axis=2)
 
-                        start = time.time()
+                        images = utils.scale(images, 0, 1, 0, 255)
 
-                        if i % 1000 == 0:
+                        for j, image in enumerate(images):
 
-                            fakes = session.run(self.fakes, feed_dict=feed_dict)
-
-                            images = np.concatenate([reals, fakes], axis=2)
-
-                            images = utils.scale(images, 0, 1, 0, 255)
-
-                            for j, image in enumerate(images):
-
-                                cv2.imwrite(
-                                    "generated/image_{}_{}.png".format(i, j),
-                                    cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                                )
+                            cv2.imwrite(
+                                "generated/image_{}_{}.png".format(i, j),
+                                cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                            )
 
             except tf.errors.OutOfRangeError:
 
