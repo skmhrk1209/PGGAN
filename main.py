@@ -93,6 +93,7 @@ gan_models = {
         )
     ),
     "SNDCGAN_1": gan.Model(
+        model_dir=args.model_dir,
         dataset=Dataset([128, 128], args.data_format),
         generator=sndcgan.Generator(
             image_size=[128, 128],
