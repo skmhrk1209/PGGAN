@@ -127,11 +127,11 @@ gan_models = {
 with tf.Session() as session:
 
     gan_models["SNDCGAN_0"].initialize()
-    gan_models["SNDCGAN_1"].reinitialize()
+    #gan_models["SNDCGAN_1"].reinitialize()
 
     if args.train:
 
-        gan_models["SNDCGAN_1"].train(
+        gan_models["SNDCGAN_0"].train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
