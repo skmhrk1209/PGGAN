@@ -115,7 +115,7 @@ class Discriminator(object):
                     kernel_size=[4, 4],
                     strides=[2, 2],
                     data_format=self.data_format,
-                    name="conv2d_{}_0".format(i),
+                    name="conv2d_{}_1".format(len(self.conv_params) - 1 - i),
                     apply_spectral_normalization=True
                 )
 
@@ -127,7 +127,7 @@ class Discriminator(object):
                     kernel_size=[3, 3],
                     strides=[1, 1],
                     data_format=self.data_format,
-                    name="conv2d_{}_1".format(i),
+                    name="conv2d_{}_0".format(len(self.conv_params) - 1 - i),
                     apply_spectral_normalization=True
                 )
 
