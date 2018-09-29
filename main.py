@@ -77,9 +77,7 @@ with tf.Session(config=config) as session:
 
     if args.train:
 
-        gan_model = gan.Model()
-
-        gan_model.build(
+        gan_model = gan.Model(
             model_dir=args.model_dir,
             dataset=Dataset(
                 image_size=[64, 64],
@@ -120,7 +118,7 @@ with tf.Session(config=config) as session:
             buffer_size=args.buffer_size
         )
         '''
-        gan_model.build(
+        gan_model = gan.Model(
             model_dir=args.model_dir,
             dataset=Dataset(
                 image_size=[128, 128],
@@ -163,7 +161,6 @@ with tf.Session(config=config) as session:
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
-        
 
     if args.predict:
 

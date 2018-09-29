@@ -24,7 +24,7 @@ class Model(object):
         )
     )
 
-    def build(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
+    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
