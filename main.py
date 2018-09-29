@@ -112,8 +112,8 @@ with tf.Session(config=config) as session:
         )
 
         gan_model.initialize()
-        '''
-        sndcgan_model_0.train(
+        
+        gan_model.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
@@ -162,6 +162,7 @@ with tf.Session(config=config) as session:
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
+        '''
 
     if args.predict:
 
