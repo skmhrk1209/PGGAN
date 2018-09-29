@@ -287,28 +287,26 @@ class Model(object):
                     summary = session.run(self.summary, feed_dict=feed_dict)
                     writer.add_summary(summary, global_step=generator_global_step)
 
-                    if i % 1000 == 0:
+                    checkpoint = self.saver.save(
+                        sess=session,
+                        save_path=os.path.join(self.name, "model.ckpt"),
+                        global_step=generator_global_step
+                    )
 
-                        checkpoint = self.saver.save(
-                            sess=session,
-                            save_path=os.path.join(self.name, "model.ckpt"),
-                            global_step=generator_global_step
-                        )
+                    stop = time.time()
+                    print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
+                    start = time.time()
 
-                        stop = time.time()
-                        print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
-                        start = time.time()
+                    fakes = session.run(self.fakes, feed_dict=feed_dict)
+                    images = np.concatenate([reals, fakes], axis=2)
+                    # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
+                    images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
 
-                        fakes = session.run(self.fakes, feed_dict=feed_dict)
-                        images = np.concatenate([reals, fakes], axis=2)
-                        # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
-                        images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
+                    for j, image in enumerate(images):
 
-                        for j, image in enumerate(images):
-
-                            cv2.imshow("image", image)
-                            cv2.waitKey(100)
-                            # cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
+                        cv2.imshow("image", image)
+                        cv2.waitKey(100)
+                        # cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
 
         except tf.errors.OutOfRangeError:
 
