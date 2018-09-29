@@ -36,14 +36,30 @@ class Model(object):
             self.discriminator = discriminator
             self.hyper_param = hyper_param
 
-            self.batch_size = tf.placeholder(dtype=tf.int32, shape=[])
-            self.training = tf.placeholder(dtype=tf.bool, shape=[])
+            self.batch_size = tf.placeholder(
+                dtype=tf.int32,
+                shape=[],
+                name="batch_size"
+            )
+            self.training = tf.placeholder(
+                dtype=tf.bool,
+                shape=[],
+                name="training"
+            )
 
             self.next_reals = self.dataset.get_next()
             self.next_latents = tf.random_normal(shape=[self.batch_size, self.hyper_param.latent_size])
 
-            self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
-            self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_param.latent_size])
+            self.reals = tf.placeholder(
+                dtype=tf.float32,
+                shape=self.next_reals.shape,
+                name="reals"
+            )
+            self.latents = tf.placeholder(
+                dtype=tf.float32,
+                shape=[None, self.hyper_param.latent_size],
+                name="latents"
+            )
 
             self.fakes = self.generator(
                 inputs=self.latents,
