@@ -147,14 +147,14 @@ with tf.Session(config=config) as session:
     if args.train:
 
         prev_gan_model.initialize()
-
+        '''
         prev_gan_model.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
-
+        '''
         next_gan_model.reinitialize()
 
         next_gan_model.train(
