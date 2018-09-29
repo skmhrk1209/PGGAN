@@ -195,6 +195,8 @@ class Model(object):
                     if "training" in operation.name
                 ]
 
+                print(training_placeholder_names)
+
                 training_placeholders = [
                     tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
                     for training_placeholder_name in training_placeholder_names
