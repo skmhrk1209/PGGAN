@@ -24,13 +24,11 @@ class Model(object):
         )
     )
 
-    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
+    def __init__(self, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            self.model_dir = model_dir
             self.name = name
-
             self.dataset = dataset
             self.generator = generator
             self.discriminator = discriminator
@@ -164,7 +162,7 @@ class Model(object):
 
         session = tf.get_default_session()
 
-        checkpoint = tf.train.latest_checkpoint(self.model_dir)
+        checkpoint = tf.train.latest_checkpoint(self.name)
 
         if checkpoint:
             self.saver.restore(session, checkpoint)
@@ -214,10 +212,13 @@ class Model(object):
                     feed_dict=feed_dict
                 )
 
-                feed_dict.update({
-                    self.latents: latents,
-                    self.reals: reals
-                })
+                feed_dict.update({self.reals: reals})
+
+                latents_placeholder_names = [
+                    "{}:0".format(operation.name)
+                    for operation in tf.get_default_graph().get_operations()
+                    if "latents" in operation.name
+                ]
 
                 training_placeholder_names = [
                     "{}:0".format(operation.name)
@@ -225,10 +226,20 @@ class Model(object):
                     if "training" in operation.name
                 ]
 
+                latents_placeholders = [
+                    tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
+                    for latents_placeholder_name in latents_placeholder_names
+                ]
+
                 training_placeholders = [
                     tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
                     for training_placeholder_name in training_placeholder_names
                 ]
+
+                feed_dict.update({
+                    latents_placeholder: latents
+                    for latents_placeholder in latents_placeholders
+                })
 
                 feed_dict.update({
                     training_placeholder: True
@@ -262,7 +273,7 @@ class Model(object):
 
                     checkpoint = self.saver.save(
                         sess=session,
-                        save_path=os.path.join(self.model_dir, "model.ckpt"),
+                        save_path=os.path.join(self.name, "model.ckpt"),
                         global_step=generator_global_step
                     )
 
