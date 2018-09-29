@@ -221,7 +221,7 @@ class Model(object):
         session.run(tf.variables_initializer(uninitialized_variables))
         print("uninitialized variables in {} initialized".format(self.name))
 
-    def train(self, filenames, batch_size, num_epochs, buffer_size):
+    def train(self, filenames, num_epochs, batch_size, buffer_size):
 
         session = tf.get_default_session()
         writer = tf.summary.FileWriter(self.name, session.graph)
@@ -235,8 +235,8 @@ class Model(object):
             # initialize dataset iterator
             self.dataset.initialize(
                 filenames=filenames,
-                batch_size=batch_size,
                 num_epochs=num_epochs,
+                batch_size=batch_size,
                 buffer_size=buffer_size
             )
 
