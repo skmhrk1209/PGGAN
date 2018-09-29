@@ -97,7 +97,6 @@ gan_model_0 = gan.Model(
 )
 
 gan_model_1 = gan.Model(
-    model_dir=args.model_dir,
     dataset=Dataset(
         image_size=[128, 128],
         data_format=args.data_format
