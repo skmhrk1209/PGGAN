@@ -63,16 +63,6 @@ class Dataset(dataset.Dataset):
 
         return image
 
-
-config = tf.ConfigProto(
-    gpu_options=tf.GPUOptions(
-        visible_device_list=args.gpu,
-        allow_growth=True
-    ),
-    log_device_placement=False,
-    allow_soft_placement=True
-)
-
 gan_model_0 = gan.Model(
     model_dir=args.model_dir,
     dataset=Dataset(
@@ -140,11 +130,27 @@ gan_model_1 = gan.Model(
     reuse=tf.AUTO_REUSE
 )
 
+config = tf.ConfigProto(
+    gpu_options=tf.GPUOptions(
+        visible_device_list=args.gpu,
+        allow_growth=True
+    ),
+    log_device_placement=False,
+    allow_soft_placement=True
+)
+
 with tf.Session(config=config) as session:
 
     if args.train:
 
         gan_model_0.initialize()
+
+        gan_model_0.train(
+            filenames=["data/train.tfrecord"],
+            batch_size=args.batch_size,
+            num_epochs=args.num_epochs,
+            buffer_size=args.buffer_size
+        )
 
         gan_model_1.reinitialize()
 
