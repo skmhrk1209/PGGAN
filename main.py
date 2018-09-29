@@ -63,8 +63,8 @@ class Dataset(dataset.Dataset):
 
         return image
 
+
 gan_model_0 = gan.Model(
-    model_dir=args.model_dir,
     dataset=Dataset(
         image_size=[64, 64],
         data_format=args.data_format
@@ -92,7 +92,8 @@ gan_model_0 = gan.Model(
         learning_rate=0.0002,
         beta1=0.5,
         beta2=0.999
-    )
+    ),
+    name=args.model_dir
 )
 
 gan_model_1 = gan.Model(
@@ -127,6 +128,7 @@ gan_model_1 = gan.Model(
         beta1=0.5,
         beta2=0.999
     ),
+    name=args.model_dir,
     reuse=tf.AUTO_REUSE
 )
 
@@ -153,14 +155,14 @@ with tf.Session(config=config) as session:
         )
         '''
         gan_model_1.reinitialize()
-        
+
         gan_model_1.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
-        
+
     if args.predict:
 
         gan_model_1.predict(
