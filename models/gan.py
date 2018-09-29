@@ -267,19 +267,16 @@ class Model(object):
             feed_dict = {self.batch_size: batch_size}
 
             try:
-
                 reals, latents = session.run(
                     [self.next_reals, self.next_latents],
                     feed_dict=feed_dict
                 )
 
             except tf.errors.OutOfRangeError:
-
                 print("training ended")
                 break
 
             else:
-
                 if reals.shape[0] != batch_size:
                     break
 
