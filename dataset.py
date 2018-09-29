@@ -31,7 +31,7 @@ class Dataset(object):
         session = tf.get_default_session()
 
         session.run(
-            [self.iterator.initializer],
+            fetches=self.iterator.initializer,
             feed_dict={
                 self.filenames: filenames,
                 self.batch_size: batch_size,

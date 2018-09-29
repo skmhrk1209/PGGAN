@@ -46,6 +46,7 @@ class Model(object):
             )
 
             self.next_reals = self.dataset.get_next()
+
             self.next_latents = tf.random_normal(
                 shape=[self.batch_size, self.hyper_param.latent_size],
                 dtype=tf.float32
@@ -56,24 +57,25 @@ class Model(object):
                 shape=self.next_reals.shape,
                 name="reals"
             )
+
             self.latents = tf.placeholder(
                 dtype=tf.float32,
                 shape=[None, self.hyper_param.latent_size],
                 name="latents"
             )
 
-            self.fakes = self.generator(
+            self.fakes = generator(
                 inputs=self.latents,
                 training=self.training,
                 name="generator"
             )
 
-            self.real_logits = self.discriminator(
+            self.real_logits = discriminator(
                 inputs=self.reals,
                 training=self.training,
                 name="discriminator"
             )
-            self.fake_logits = self.discriminator(
+            self.fake_logits = discriminator(
                 inputs=self.fakes,
                 training=self.training,
                 name="discriminator",
@@ -100,20 +102,13 @@ class Model(object):
                 )
             )
 
-            self.interpolate_coefficients = tf.random_uniform(
-                shape=[self.batch_size, 1, 1, 1],
-                dtype=tf.float32
-            )
+            self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
             self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
-            self.interpolate_logits = self.discriminator(
-                inputs=self.interpolates,
-                training=self.training,
-                name="discriminator",
-                reuse=True
-            )
+            self.interpolate_logits = discriminator(inputs=self.interpolates, training=self.training, name="discriminator", reuse=True)
 
             self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
             self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
+
             self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
 
@@ -126,8 +121,20 @@ class Model(object):
                 scope="{}/discriminator".format(self.name)
             )
 
-            self.generator_global_step = tf.Variable(initial_value=0, trainable=False)
-            self.discriminator_global_step = tf.Variable(initial_value=0, trainable=False)
+            self.generator_global_step = tf.get_variable(
+                name="generator_global_step",
+                shape=[],
+                dtype=tf.int32,
+                initializer=tf.zeros_initializer(),
+                trainable=False
+            )
+            self.discriminator_global_step = tf.get_variable(
+                name="discriminator_global_step",
+                shape=[],
+                dtype=tf.int32,
+                initializer=tf.zeros_initializer(),
+                trainable=False
+            )
 
             self.generator_optimizer = tf.train.AdamOptimizer(
                 learning_rate=self.hyper_param.learning_rate,
@@ -140,9 +147,7 @@ class Model(object):
                 beta2=self.hyper_param.beta2
             )
 
-            self.update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-
-            with tf.control_dependencies(self.update_ops):
+            with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
 
                 self.generator_train_op = self.generator_optimizer.minimize(
                     loss=self.generator_loss,
@@ -157,6 +162,14 @@ class Model(object):
                 )
 
             self.saver = tf.train.Saver()
+
+            tf.summary.image("reals", self.reals)
+            tf.summary.image("fakes", self.fakes)
+            tf.summary.scalar("generator_loss", self.generator_loss)
+            tf.summary.scalar("discriminator_loss", self.discriminator_loss)
+            tf.summary.scalar("gradient_penalty", self.gradient_penalty)
+
+            self.summary = tf.summary.merge_all()
 
     def initialize(self):
 
@@ -178,8 +191,7 @@ class Model(object):
         session = tf.get_default_session()
 
         uninitialized_variables = [
-            variable
-            for variable in tf.global_variables(self.name)
+            variable for variable in tf.global_variables(self.name)
             if not session.run(tf.is_variable_initialized(variable))
         ]
 
@@ -189,6 +201,7 @@ class Model(object):
     def train(self, filenames, batch_size, num_epochs, buffer_size):
 
         session = tf.get_default_session()
+        writer = tf.summary.FileWriter(self.name, session.graph)
 
         try:
 
@@ -203,38 +216,38 @@ class Model(object):
                 buffer_size=buffer_size
             )
 
+            latents_placeholder_names = [
+                "{}:0".format(operation.name)
+                for operation in tf.get_default_graph().get_operations()
+                if "latents" in operation.name
+            ]
+
+            training_placeholder_names = [
+                "{}:0".format(operation.name)
+                for operation in tf.get_default_graph().get_operations()
+                if "training" in operation.name
+            ]
+
+            latents_placeholders = [
+                tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
+                for latents_placeholder_name in latents_placeholder_names
+            ]
+
+            training_placeholders = [
+                tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
+                for training_placeholder_name in training_placeholder_names
+            ]
+
             for i in itertools.count():
 
                 feed_dict = {self.batch_size: batch_size}
 
                 reals, latents = session.run(
-                    [self.next_reals, self.next_latents],
+                    fetches=[self.next_reals, self.next_latents],
                     feed_dict=feed_dict
                 )
 
                 feed_dict.update({self.reals: reals})
-
-                latents_placeholder_names = [
-                    "{}:0".format(operation.name)
-                    for operation in tf.get_default_graph().get_operations()
-                    if "latents" in operation.name
-                ]
-
-                training_placeholder_names = [
-                    "{}:0".format(operation.name)
-                    for operation in tf.get_default_graph().get_operations()
-                    if "training" in operation.name
-                ]
-
-                latents_placeholders = [
-                    tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
-                    for latents_placeholder_name in latents_placeholder_names
-                ]
-
-                training_placeholders = [
-                    tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
-                    for training_placeholder_name in training_placeholder_names
-                ]
 
                 feed_dict.update({
                     latents_placeholder: latents
@@ -246,101 +259,57 @@ class Model(object):
                     for training_placeholder in training_placeholders
                 })
 
-                session.run(self.generator_train_op, feed_dict=feed_dict)
-                session.run(self.discriminator_train_op, feed_dict=feed_dict)
+                session.run(
+                    fetches=[self.generator_train_op, self.discriminator_train_op],
+                    feed_dict=feed_dict
+                )
 
                 if i % 100 == 0:
 
                     generator_global_step, generator_loss = session.run(
-                        [self.generator_global_step, self.generator_loss],
+                        fetches=[self.generator_global_step, self.generator_loss],
                         feed_dict=feed_dict
                     )
-
                     print("global_step: {}, generator_loss: {:.2f}".format(
                         generator_global_step,
                         generator_loss
                     ))
 
                     discriminator_global_step, discriminator_loss = session.run(
-                        [self.discriminator_global_step, self.discriminator_loss],
+                        fetches=[self.discriminator_global_step, self.discriminator_loss],
                         feed_dict=feed_dict
                     )
-
                     print("global_step: {}, discriminator_loss: {:.2f}".format(
                         discriminator_global_step,
                         discriminator_loss
                     ))
 
-                    checkpoint = self.saver.save(
-                        sess=session,
-                        save_path=os.path.join(self.name, "model.ckpt"),
-                        global_step=generator_global_step
-                    )
-
-                    stop = time.time()
-
-                    print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
-
-                    start = time.time()
+                    summary = session.run(self.summary, feed_dict=feed_dict)
+                    writer.add_summary(summary, global_step=generator_global_step)
 
                     if i % 1000 == 0:
 
+                        checkpoint = self.saver.save(
+                            sess=session,
+                            save_path=os.path.join(self.name, "model.ckpt"),
+                            global_step=generator_global_step
+                        )
+
+                        stop = time.time()
+                        print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
+                        start = time.time()
+
                         fakes = session.run(self.fakes, feed_dict=feed_dict)
-
                         images = np.concatenate([reals, fakes], axis=2)
-
-                        images = utils.scale(images, 0, 1, 0, 255)
+                        # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
+                        images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
 
                         for j, image in enumerate(images):
 
-                            cv2.imwrite(
-                                "generated/image_{}_{}.png".format(i, j),
-                                cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                            )
+                            cv2.imshow("image", image)
+                            cv2.waitKey(100)
+                            # cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
 
         except tf.errors.OutOfRangeError:
 
             print("training ended")
-
-    def predict(self, filenames, batch_size, num_epochs, buffer_size):
-
-        session = tf.get_default_session()
-
-        try:
-
-            print("prediction started")
-
-            self.dataset.initialize(
-                filenames=filenames,
-                batch_size=batch_size,
-                num_epochs=num_epochs,
-                buffer_size=buffer_size
-            )
-
-            for i in itertools.count():
-
-                feed_dict = {self.batch_size: batch_size}
-
-                reals, latents = session.run(
-                    [self.next_reals, self.next_latents],
-                    feed_dict=feed_dict
-                )
-
-                feed_dict.update({
-                    self.latents: latents,
-                    self.training: False
-                })
-
-                fakes = session.run(self.fakes, feed_dict=feed_dict)
-
-                images = np.concatenate([reals, fakes], axis=2)
-
-                for image in images:
-
-                    cv2.imshow("image", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-
-                    cv2.waitKey(100)
-
-        except tf.errors.OutOfRangeError:
-
-            print("prediction ended")
