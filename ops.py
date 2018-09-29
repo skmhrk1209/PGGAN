@@ -90,7 +90,10 @@ def dense(inputs, units, name="dense", reuse=None, apply_spectral_normalization=
 
         if apply_spectral_normalization:
 
-            weight = spectral_normalization(weight)
+            weight = spectral_normalization(
+                input=weight,
+                name="spectral_normalization"
+            )
 
         bias = tf.get_variable(
             name="bias",
@@ -127,7 +130,10 @@ def conv2d(inputs, filters, kernel_size, strides, data_format,
 
         if apply_spectral_normalization:
 
-            kernel = spectral_normalization(kernel)
+            kernel = spectral_normalization(
+                input=kernel,
+                name="spectral_normalization"
+            )
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
 
@@ -178,7 +184,10 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
 
         if apply_spectral_normalization:
 
-            kernel = spectral_normalization(kernel)
+            kernel = spectral_normalization(
+                input=kernel,
+                name="spectral_normalization"
+            )
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
 
@@ -225,7 +234,12 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
 
         if normalization:
 
-            inputs = normalization(inputs, data_format, training)
+            inputs = normalization(
+                inputs=inputs,
+                data_format=data_format,
+                training=training,
+                name="normalization_0"
+            )
 
         if activation:
 
@@ -237,7 +251,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[1, 1],
             strides=strides,
             data_format=data_format,
-            name="conv2d_0",
+            name="projection",
             apply_spectral_normalization=apply_spectral_normalization
         )
 
@@ -247,13 +261,18 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[3, 3],
             strides=strides,
             data_format=data_format,
-            name="conv2d_1",
+            name="conv2d_0",
             apply_spectral_normalization=apply_spectral_normalization
         )
 
         if normalization:
 
-            inputs = normalization(inputs, data_format, training)
+            inputs = normalization(
+                inputs=inputs,
+                data_format=data_format,
+                training=training,
+                name="normalization_1"
+            )
 
         if activation:
 
@@ -265,7 +284,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[3, 3],
             strides=[1, 1],
             data_format=data_format,
-            name="conv2d_2",
+            name="conv2d_1",
             apply_spectral_normalization=apply_spectral_normalization
         )
 

@@ -40,7 +40,7 @@ class Generator(object):
 
                 inputs = tf.transpose(inputs, [0, 3, 1, 2])
 
-            for i, residual_param in enumerate(self.residual_params):
+            for i, residual_param in enumerate(self.residual_params, 1):
 
                 inputs = ops.unpooling2d(
                     inputs=inputs,
@@ -64,7 +64,8 @@ class Generator(object):
             inputs = ops.batch_normalization(
                 inputs=inputs,
                 data_format=self.data_format,
-                training=training
+                training=training,
+                name="batch_normalization_{}".format(len(self.residual_params) + 1)
             )
 
             inputs = tf.nn.relu(inputs)
@@ -75,7 +76,7 @@ class Generator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="conv2d_0"
+                name="conv2d_{}".format(len(self.residual_params) + 1)
             )
 
             inputs = tf.nn.sigmoid(inputs)
@@ -103,13 +104,13 @@ class Discriminator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="conv2d_0",
+                name="conv2d_{}".format(len(self.residual_params) + 1),
                 apply_spectral_normalization=True
             )
 
-            for i, residual_param in enumerate(self.residual_params):
+            for i, residual_param in enumerate(self.residual_params, 1):
 
-                for j in range(residual_param.blocks):
+                for j, _ in enumerate(range(residual_param.blocks), 1):
 
                     inputs = ops.residual_block(
                         inputs=inputs,
@@ -119,7 +120,10 @@ class Discriminator(object):
                         activation=tf.nn.relu,
                         data_format=self.data_format,
                         training=training,
-                        name="residual_block_{}_{}".format(i, j),
+                        name="residual_block_{}_{}".format(
+                            len(self.residual_params) + 1 - i,
+                            len(residual_param.blocks) - j
+                        ),
                         apply_spectral_normalization=True
                     )
 

@@ -185,6 +185,8 @@ with tf.Session(config=config) as session:
 
             gan_model.reinitialize() if i else gan_model.initialize()
 
+            if i == 0: continue
+
             gan_model.train(
                 filenames=["data/train.tfrecord"],
                 num_epochs=num_epochs,
