@@ -163,15 +163,13 @@ class Model(object):
 
             self.saver = tf.train.Saver()
 
-    def summarize(self):
-
-        tf.summary.image("reals", self.reals)
-        tf.summary.image("fakes", self.fakes)
-        tf.summary.scalar("generator_loss", self.generator_loss)
-        tf.summary.scalar("discriminator_loss", self.discriminator_loss)
-        tf.summary.scalar("gradient_penalty", self.gradient_penalty)
-
-        self.summary = tf.summary.merge_all()
+            self.summary = tf.summary.merge([
+                tf.summary.image("reals", self.reals),
+                tf.summary.image("fakes", self.fakes),
+                tf.summary.scalar("generator_loss", self.generator_loss),
+                tf.summary.scalar("discriminator_loss", self.discriminator_loss),
+                tf.summary.scalar("gradient_penalty", self.gradient_penalty),
+            ])
 
     def initialize(self):
 
