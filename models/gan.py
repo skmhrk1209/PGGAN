@@ -269,7 +269,7 @@ class Model(object):
             try:
 
                 reals, latents = session.run(
-                    fetches=[self.next_reals, self.next_latents],
+                    [self.next_reals, self.next_latents],
                     feed_dict=feed_dict
                 )
 
@@ -296,14 +296,14 @@ class Model(object):
             })
 
             session.run(
-                fetches=[self.generator_train_op, self.discriminator_train_op],
+                [self.generator_train_op, self.discriminator_train_op],
                 feed_dict=feed_dict
             )
 
             if i % 100 == 0:
 
                 generator_global_step, generator_loss = session.run(
-                    fetches=[self.generator_global_step, self.generator_loss],
+                    [self.generator_global_step, self.generator_loss],
                     feed_dict=feed_dict
                 )
                 print("global_step: {}, generator_loss: {:.2f}".format(
@@ -312,7 +312,7 @@ class Model(object):
                 ))
 
                 discriminator_global_step, discriminator_loss = session.run(
-                    fetches=[self.discriminator_global_step, self.discriminator_loss],
+                    [self.discriminator_global_step, self.discriminator_loss],
                     feed_dict=feed_dict
                 )
                 print("global_step: {}, discriminator_loss: {:.2f}".format(
