@@ -151,7 +151,8 @@ with tf.Session(config=config) as session:
                 learning_rate=0.0002,
                 beta1=0.5,
                 beta2=0.999
-            )
+            ),
+            reuse=tf.AUTO_REUSE
         )
 
         gan_model.reinitialize()
