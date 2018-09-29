@@ -77,7 +77,9 @@ with tf.Session(config=config) as session:
 
     if args.train:
 
-        sndcgan_model_0 = gan.Model(
+        gan_model = gan.Model()
+
+        gan_model.build(
             model_dir=args.model_dir,
             dataset=Dataset(
                 image_size=[64, 64],
@@ -109,7 +111,7 @@ with tf.Session(config=config) as session:
             )
         )
 
-        sndcgan_model_0.initialize()
+        gan_model.initialize()
         '''
         sndcgan_model_0.train(
             filenames=["data/train.tfrecord"],
@@ -118,7 +120,7 @@ with tf.Session(config=config) as session:
             buffer_size=args.buffer_size
         )
         '''
-        sndcgan_model_1 = gan.Model(
+        gan_model.build(
             model_dir=args.model_dir,
             dataset=Dataset(
                 image_size=[128, 128],
@@ -152,9 +154,9 @@ with tf.Session(config=config) as session:
             )
         )
 
-        sndcgan_model_1.reinitialize()
+        gan_model.reinitialize()
 
-        sndcgan_model_1.train(
+        gan_model.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
@@ -163,7 +165,7 @@ with tf.Session(config=config) as session:
 
     if args.predict:
 
-        sndcgan_model_0.predict(
+        gan_model.predict(
             filenames=["data/test.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,

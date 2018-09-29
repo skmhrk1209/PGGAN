@@ -24,7 +24,7 @@ class Model(object):
         )
     )
 
-    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=tf.AUTO_REUSE):
+    def build(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
@@ -48,7 +48,7 @@ class Model(object):
             self.fakes = self.generator(inputs=self.latents, training=self.training, name="generator")
 
             self.real_logits = self.discriminator(inputs=self.reals, training=self.training, name="discriminator")
-            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, name="discriminator")
+            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, name="discriminator", reuse=True)
 
             self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
