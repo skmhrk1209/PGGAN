@@ -43,10 +43,10 @@ class Model(object):
             self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
             self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_param.latent_size])
 
-            self.fakes = self.generator(inputs=self.latents, training=self.training, reuse=tf.AUTO_REUSE)
+            self.fakes = self.generator(inputs=self.latents, training=self.training)
 
-            self.real_logits = self.discriminator(inputs=self.reals, training=self.training, reuse=tf.AUTO_REUSE)
-            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, reuse=tf.AUTO_REUSE)
+            self.real_logits = self.discriminator(inputs=self.reals, training=self.training)
+            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training)
 
             self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
