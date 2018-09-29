@@ -144,23 +144,23 @@ with tf.Session(config=config) as session:
     if args.train:
 
         gan_model_0.initialize()
-        '''
+        
         gan_model_0.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
-        '''
+        
         gan_model_1.reinitialize()
-
+        
         gan_model_1.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
             buffer_size=args.buffer_size
         )
-
+        
     if args.predict:
 
         gan_model_1.predict(

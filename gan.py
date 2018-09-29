@@ -45,10 +45,23 @@ class Model(object):
             self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
             self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_param.latent_size])
 
-            self.fakes = self.generator(inputs=self.latents, training=self.training, name="generator")
+            self.fakes = self.generator(
+                inputs=self.latents,
+                training=self.training,
+                name="generator"
+            )
 
-            self.real_logits = self.discriminator(inputs=self.reals, training=self.training, name="discriminator")
-            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, name="discriminator", reuse=True)
+            self.real_logits = self.discriminator(
+                inputs=self.reals,
+                training=self.training,
+                name="discriminator"
+            )
+            self.fake_logits = self.discriminator(
+                inputs=self.fakes,
+                training=self.training,
+                name="discriminator",
+                reuse=True
+            )
 
             self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
@@ -63,7 +76,12 @@ class Model(object):
 
             interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
             interpolates = self.reals + (self.fakes - self.reals) * interpolate_coefficients
-            interpolate_logits = self.discriminator(inputs=interpolates, training=self.training, reuse=True)
+            interpolate_logits = self.discriminator(
+                inputs=interpolates,
+                training=self.training,
+                name="discriminator",
+                reuse=True
+            )
 
             gradients = tf.gradients(ys=interpolate_logits, xs=interpolates)[0]
             slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3]) + 0.0001)
@@ -71,17 +89,27 @@ class Model(object):
             self.gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
 
-            self.generator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="{}/generator".format(self.name))
-            self.discriminator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="{}/discriminator".format(self.name))
+            self.generator_variables = tf.get_collection(
+                key=tf.GraphKeys.TRAINABLE_VARIABLES,
+                scope="{}/generator".format(self.name)
+            )
+            self.discriminator_variables = tf.get_collection(
+                key=tf.GraphKeys.TRAINABLE_VARIABLES,
+                scope="{}/discriminator".format(self.name)
+            )
 
             self.generator_global_step = tf.Variable(initial_value=0, trainable=False)
             self.discriminator_global_step = tf.Variable(initial_value=0, trainable=False)
 
             self.generator_optimizer = tf.train.AdamOptimizer(
-                learning_rate=self.hyper_param.learning_rate, beta1=self.hyper_param.beta1, beta2=self.hyper_param.beta2
+                learning_rate=self.hyper_param.learning_rate,
+                beta1=self.hyper_param.beta1,
+                beta2=self.hyper_param.beta2
             )
             self.discriminator_optimizer = tf.train.AdamOptimizer(
-                learning_rate=self.hyper_param.learning_rate, beta1=self.hyper_param.beta1, beta2=self.hyper_param.beta2
+                learning_rate=self.hyper_param.learning_rate,
+                beta1=self.hyper_param.beta1,
+                beta2=self.hyper_param.beta2
             )
 
             self.update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
