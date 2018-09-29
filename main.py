@@ -93,17 +93,46 @@ gan_models = {
         )
     ),
     
-    
+    "SNDCGAN_1": gan.Model(
+        model_dir=args.model_dir,
+        dataset=Dataset([128, 128], args.data_format),
+        generator=sndcgan.Generator(
+            image_size=[128, 128],
+            filters=512,
+            deconv_params=[
+                sndcgan.Generator.DeconvParam(filters=256),
+                sndcgan.Generator.DeconvParam(filters=128),
+                sndcgan.Generator.DeconvParam(filters=64)
+            ],
+            data_format=args.data_format,
+        ),
+        discriminator=sndcgan.Discriminator(
+            filters=64,
+            conv_params=[
+                sndcgan.Discriminator.ConvParam(filters=128),
+                sndcgan.Discriminator.ConvParam(filters=256),
+                sndcgan.Discriminator.ConvParam(filters=512)
+            ],
+            data_format=args.data_format
+        ),
+        hyper_param=gan.Model.HyperParam(
+            latent_size=128,
+            gradient_coefficient=1.0,
+            learning_rate=0.0002,
+            beta1=0.5,
+            beta2=0.999
+        )
+    )
 }
 
 with tf.Session() as session:
 
     gan_models["SNDCGAN_0"].initialize()
-    #gan_models["SNDCGAN_1"].reinitialize()
+    gan_models["SNDCGAN_1"].reinitialize()
 
     if args.train:
 
-        gan_models["SNDCGAN_0"].train(
+        gan_models["SNDCGAN_1"].train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
