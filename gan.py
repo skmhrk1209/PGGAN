@@ -108,7 +108,7 @@ class Model(object):
             )
             self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
             self.interpolate_logits = self.discriminator(
-                inputs=interpolates,
+                inputs=self.interpolates,
                 training=self.training,
                 name="discriminator",
                 reuse=True
