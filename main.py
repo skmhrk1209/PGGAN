@@ -54,6 +54,7 @@ class Dataset(dataset.Dataset):
         image = tf.read_file(features["path"])
         image = tf.image.decode_jpeg(image, 3)
         image = tf.image.convert_image_dtype(image, tf.float32)
+        image = tf.image.resize_image_with_crop_or_pad(image, 128, 128)
         image = tf.image.resize_images(image, self.image_size)
 
         if self.data_format == "channels_first":
@@ -63,103 +64,100 @@ class Dataset(dataset.Dataset):
         return image
 
 
-gan_models = {
-    "SNDCGAN_0": gan.Model(
-        model_dir=args.model_dir,
-        dataset=Dataset([64, 64], args.data_format),
-        generator=sndcgan.Generator(
-            image_size=[64, 64],
-            filters=512,
-            deconv_params=[
-                sndcgan.Generator.DeconvParam(filters=256),
-                sndcgan.Generator.DeconvParam(filters=128),
-            ],
-            data_format=args.data_format,
-        ),
-        discriminator=sndcgan.Discriminator(
-            filters=128,
-            conv_params=[
-                sndcgan.Discriminator.ConvParam(filters=256),
-                sndcgan.Discriminator.ConvParam(filters=512)
-            ],
-            data_format=args.data_format
-        ),
-        hyper_param=gan.Model.HyperParam(
-            latent_size=128,
-            gradient_coefficient=1.0,
-            learning_rate=0.0002,
-            beta1=0.5,
-            beta2=0.999
-        )
+sndcgan_model_0 = gan.Model(
+    model_dir=args.model_dir,
+    dataset=Dataset(
+        image_size=[64, 64],
+        data_format=args.data_format
     ),
-    
-    "SNDCGAN_1": gan.Model(
-        model_dir=args.model_dir,
-        dataset=Dataset([128, 128], args.data_format),
-        generator=sndcgan.Generator(
-            image_size=[128, 128],
-            filters=512,
-            deconv_params=[
-                sndcgan.Generator.DeconvParam(filters=256),
-                sndcgan.Generator.DeconvParam(filters=128),
-                sndcgan.Generator.DeconvParam(filters=64)
-            ],
-            data_format=args.data_format,
-        ),
-        discriminator=sndcgan.Discriminator(
-            filters=64,
-            conv_params=[
-                sndcgan.Discriminator.ConvParam(filters=128),
-                sndcgan.Discriminator.ConvParam(filters=256),
-                sndcgan.Discriminator.ConvParam(filters=512)
-            ],
-            data_format=args.data_format
-        ),
-        hyper_param=gan.Model.HyperParam(
-            latent_size=128,
-            gradient_coefficient=1.0,
-            learning_rate=0.0002,
-            beta1=0.5,
-            beta2=0.999
-        )
+    generator=sndcgan.Generator(
+        image_size=[64, 64],
+        filters=512,
+        deconv_params=[
+            sndcgan.Generator.DeconvParam(filters=256),
+            sndcgan.Generator.DeconvParam(filters=128),
+        ],
+        data_format=args.data_format,
+    ),
+    discriminator=sndcgan.Discriminator(
+        filters=128,
+        conv_params=[
+            sndcgan.Discriminator.ConvParam(filters=256),
+            sndcgan.Discriminator.ConvParam(filters=512)
+        ],
+        data_format=args.data_format
+    ),
+    hyper_param=gan.Model.HyperParam(
+        latent_size=128,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999
     )
-}
+)
 
-with tf.Session() as session:
+sndcgan_model_1 = gan.Model(
+    model_dir=args.model_dir,
+    dataset=Dataset(
+        image_size=[128, 128],
+        data_format=args.data_format
+    ),
+    generator=sndcgan.Generator(
+        image_size=[128, 128],
+        filters=512,
+        deconv_params=[
+            sndcgan.Generator.DeconvParam(filters=256),
+            sndcgan.Generator.DeconvParam(filters=128),
+            sndcgan.Generator.DeconvParam(filters=64)
+        ],
+        data_format=args.data_format,
+    ),
+    discriminator=sndcgan.Discriminator(
+        filters=64,
+        conv_params=[
+            sndcgan.Discriminator.ConvParam(filters=128),
+            sndcgan.Discriminator.ConvParam(filters=256),
+            sndcgan.Discriminator.ConvParam(filters=512)
+        ],
+        data_format=args.data_format
+    ),
+    hyper_param=gan.Model.HyperParam(
+        latent_size=128,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999
+    )
+)
 
-    gan_models["SNDCGAN_0"].initialize()
-    gan_models["SNDCGAN_1"].reinitialize()
+config = tf.ConfigProto(
+    gpu_options=tf.GPUOptions(
+        visible_device_list=args.gpu,
+        allow_growth=True
+    ),
+    log_device_placement=False,
+    allow_soft_placement=True
+)
+
+with tf.Session(config=config) as session:
+
+    sndcgan_model_0.initialize()
+    sndcgan_model_1.reinitialize()
 
     if args.train:
 
-        gan_models["SNDCGAN_1"].train(
+        sndcgan_model_0.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
-            buffer_size=args.buffer_size,
-            config=tf.ConfigProto(
-                gpu_options=tf.GPUOptions(
-                    visible_device_list=args.gpu,
-                    allow_growth=True
-                ),
-                log_device_placement=False,
-                allow_soft_placement=True
-            )
+            buffer_size=args.buffer_size
         )
 
     if args.predict:
 
-        gan_models["SNDCGAN"].predict(
+        sndcgan_model_0.predict(
             filenames=["data/test.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
-            buffer_size=args.buffer_size,
-            config=tf.ConfigProto(
-                gpu_options=tf.GPUOptions(
-                    visible_device_list=args.gpu,
-                    allow_growth=True
-                ),
-                log_device_placement=False,
-                allow_soft_placement=True
-            )
+            buffer_size=args.buffer_size
         )

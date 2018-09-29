@@ -24,11 +24,13 @@ class Model(object):
         )
     )
 
-    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param):
+    def __init__(self, model_dir, dataset, generator, discriminator, hyper_param, name="gan", reuse=tf.AUTO_REUSE):
 
-        with tf.variable_scope("pggan", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope(name, reuse=reuse):
 
             self.model_dir = model_dir
+            self.name = name
+
             self.dataset = dataset
             self.generator = generator
             self.discriminator = discriminator
@@ -43,10 +45,10 @@ class Model(object):
             self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
             self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_param.latent_size])
 
-            self.fakes = self.generator(inputs=self.latents, training=self.training)
+            self.fakes = self.generator(inputs=self.latents, training=self.training, name="generator")
 
-            self.real_logits = self.discriminator(inputs=self.reals, training=self.training)
-            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training)
+            self.real_logits = self.discriminator(inputs=self.reals, training=self.training, name="discriminator")
+            self.fake_logits = self.discriminator(inputs=self.fakes, training=self.training, name="discriminator")
 
             self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
@@ -69,8 +71,8 @@ class Model(object):
             self.gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
 
-            self.generator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="pggan/generator")
-            self.discriminator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="pggan/discriminator")
+            self.generator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="{}/generator".format(self.name))
+            self.discriminator_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="{}/discriminator".format(self.name))
 
             self.generator_global_step = tf.Variable(initial_value=0, trainable=False)
             self.discriminator_global_step = tf.Variable(initial_value=0, trainable=False)
@@ -111,27 +113,27 @@ class Model(object):
             print(checkpoint, "loaded")
 
         else:
-            session.run(tf.global_variables_initializer())
-            print("global variables initialized")
+            global_variables = tf.global_variables(scope=self.name)
+            session.run(tf.variables_initializer(global_variables))
+            print("global variables in {} initialized".format(self.name))
 
     def reinitialize(self):
 
         session = tf.get_default_session()
-        tf.get_variable_scope().reuse_variables()
 
-        uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
-        print(uninitialized_variable_names)
-        uninitialized_variables = [var for var in tf.global_variables() if session.run(tf.is_variable_initialized(var))]
+        uninitialized_variables = [
+            variable for variable in tf.global_variables(self.name)
+            if not session.run(tf.is_variable_initialized(variable))
+        ]
+
+        print(len(uninitialized_variables))
 
         session.run(tf.variables_initializer(uninitialized_variables))
-        print("uninitialized variables initialized")
+        print("uninitialized variables in {} initialized".format(self.name))
 
-    def train(self, filenames, batch_size, num_epochs, buffer_size, config):
+    def train(self, filenames, batch_size, num_epochs, buffer_size):
 
         session = tf.get_default_session()
-
-        session.run(tf.local_variables_initializer())
-        print("local variables initialized")
 
         try:
 
@@ -217,45 +219,45 @@ class Model(object):
 
             print("training ended")
 
-    def predict(self, filenames, batch_size, num_epochs, buffer_size, config):
+    def predict(self, filenames, batch_size, num_epochs, buffer_size):
 
-        with tf.Session(config=config) as session:
+        session = tf.get_default_session()
 
-            try:
+        try:
 
-                print("prediction started")
+            print("prediction started")
 
-                self.dataset.initialize(
-                    filenames=filenames,
-                    batch_size=batch_size,
-                    num_epochs=num_epochs,
-                    buffer_size=buffer_size
+            self.dataset.initialize(
+                filenames=filenames,
+                batch_size=batch_size,
+                num_epochs=num_epochs,
+                buffer_size=buffer_size
+            )
+
+            for i in itertools.count():
+
+                feed_dict = {self.batch_size: batch_size}
+
+                reals, latents = session.run(
+                    [self.next_reals, self.next_latents],
+                    feed_dict=feed_dict
                 )
 
-                for i in itertools.count():
+                feed_dict.update({
+                    self.latents: latents,
+                    self.training: False
+                })
 
-                    feed_dict = {self.batch_size: batch_size}
+                fakes = session.run(self.fakes, feed_dict=feed_dict)
 
-                    reals, latents = session.run(
-                        [self.next_reals, self.next_latents],
-                        feed_dict=feed_dict
-                    )
+                images = np.concatenate([reals, fakes], axis=2)
 
-                    feed_dict.update({
-                        self.latents: latents,
-                        self.training: False
-                    })
+                for image in images:
 
-                    fakes = session.run(self.fakes, feed_dict=feed_dict)
+                    cv2.imshow("image", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
-                    images = np.concatenate([reals, fakes], axis=2)
+                    cv2.waitKey(100)
 
-                    for image in images:
+        except tf.errors.OutOfRangeError:
 
-                        cv2.imshow("image", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-
-                        cv2.waitKey(100)
-
-            except tf.errors.OutOfRangeError:
-
-                print("prediction ended")
+            print("prediction ended")

@@ -56,7 +56,7 @@ class Generator(object):
                     kernel_size=[4, 4],
                     strides=[2, 2],
                     data_format=self.data_format,
-                    name="deconv_{}".format(i)
+                    name="deconv2d_{}".format(i)
                 )
 
                 inputs = ops.batch_normalization(
@@ -73,7 +73,7 @@ class Generator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="conv2d_{}".format(len(self.deconv_params))
+                name="last_deconv2d_{}".format(len(self.deconv_params))
             )
 
             inputs = tf.nn.sigmoid(inputs)
@@ -101,7 +101,7 @@ class Discriminator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="conv2d_{}".format(len(self.conv_params)),
+                name="first_conv2d_{}".format(len(self.conv_params)),
                 apply_spectral_normalization=True
             )
 

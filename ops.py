@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def spectral_normalization(input):
+def spectral_normalization(input, name="spectral_normalization", reuse=None):
     ''' spectral normalization
 
         [Spectral Normalization for Generative Adversarial Networks]
@@ -19,56 +19,58 @@ def spectral_normalization(input):
     if len(input.shape) < 2:
         raise ValueError("Spectral norm can only be applied to multi-dimensional tensors")
 
-    # The paper says to flatten convnet kernel weights from (C_out, C_in, KH, KW)
-    # to (C_out, C_in * KH * KW). But Sonnet's and Compare_gan's Conv2D kernel
-    # weight shape is (KH, KW, C_in, C_out), so it should be reshaped to
-    # (KH * KW * C_in, C_out), and similarly for other layers that put output
-    # channels as last dimension.
-    # n.b. this means that w here is equivalent to w.T in the paper.
-    w = tf.reshape(input, [-1, input.shape[-1]])
+    with tf.variable_scope(name, reuse=reuse):
 
-    # Persisted approximation of first left singular vector of matrix `w`.
+        # The paper says to flatten convnet kernel weights from (C_out, C_in, KH, KW)
+        # to (C_out, C_in * KH * KW). But Sonnet's and Compare_gan's Conv2D kernel
+        # weight shape is (KH, KW, C_in, C_out), so it should be reshaped to
+        # (KH * KW * C_in, C_out), and similarly for other layers that put output
+        # channels as last dimension.
+        # n.b. this means that w here is equivalent to w.T in the paper.
+        w = tf.reshape(input, [-1, input.shape[-1]])
 
-    u_var = tf.get_variable(
-        name=input.name.replace(":", "") + "/u_var",
-        shape=[w.shape[0], 1],
-        dtype=w.dtype,
-        initializer=tf.random_normal_initializer(),
-        trainable=False
-    )
-    u = u_var
+        # Persisted approximation of first left singular vector of matrix `w`.
 
-    # Use power iteration method to approximate spectral norm.
-    # The authors suggest that "one round of power iteration was sufficient in the
-    # actual experiment to achieve satisfactory performance". According to
-    # observation, the spectral norm become very accurate after ~20 steps.
+        u_var = tf.get_variable(
+            name="u_var",
+            shape=[w.shape[0], 1],
+            dtype=w.dtype,
+            initializer=tf.random_normal_initializer(),
+            trainable=False
+        )
+        u = u_var
 
-    power_iteration_rounds = 1
-    for _ in range(power_iteration_rounds):
-        # `v` approximates the first right singular vector of matrix `w`.
-        v = tf.nn.l2_normalize(tf.matmul(tf.transpose(w), u), dim=None, epsilon=1e-12)
-        u = tf.nn.l2_normalize(tf.matmul(w, v), dim=None, epsilon=1e-12)
+        # Use power iteration method to approximate spectral norm.
+        # The authors suggest that "one round of power iteration was sufficient in the
+        # actual experiment to achieve satisfactory performance". According to
+        # observation, the spectral norm become very accurate after ~20 steps.
 
-    # Update persisted approximation.
-    with tf.control_dependencies([tf.assign(u_var, u, name="update_u")]):
-        u = tf.identity(u)
+        power_iteration_rounds = 1
+        for _ in range(power_iteration_rounds):
+            # `v` approximates the first right singular vector of matrix `w`.
+            v = tf.nn.l2_normalize(tf.matmul(tf.transpose(w), u), dim=None, epsilon=1e-12)
+            u = tf.nn.l2_normalize(tf.matmul(w, v), dim=None, epsilon=1e-12)
 
-    # The authors of SN-GAN chose to stop gradient propagating through u and v.
-    # In johnme@'s experiments it wasn't clear that this helps, but it doesn't
-    # seem to hinder either so it's kept in order to be a faithful implementation.
-    u = tf.stop_gradient(u)
-    v = tf.stop_gradient(v)
+        # Update persisted approximation.
+        with tf.control_dependencies([tf.assign(u_var, u, name="update_u")]):
+            u = tf.identity(u)
 
-    # Largest singular value of `w`.
-    norm_value = tf.matmul(tf.matmul(tf.transpose(u), w), v)
-    norm_value.shape.assert_is_fully_defined()
-    norm_value.shape.assert_is_compatible_with([1, 1])
+        # The authors of SN-GAN chose to stop gradient propagating through u and v.
+        # In johnme@'s experiments it wasn't clear that this helps, but it doesn't
+        # seem to hinder either so it's kept in order to be a faithful implementation.
+        u = tf.stop_gradient(u)
+        v = tf.stop_gradient(v)
 
-    w_normalized = w / norm_value
+        # Largest singular value of `w`.
+        norm_value = tf.matmul(tf.matmul(tf.transpose(u), w), v)
+        norm_value.shape.assert_is_fully_defined()
+        norm_value.shape.assert_is_compatible_with([1, 1])
 
-    # Unflatten normalized weights to match the unnormalized tensor.
-    w_tensor_normalized = tf.reshape(w_normalized, input.shape)
-    return w_tensor_normalized
+        w_normalized = w / norm_value
+
+        # Unflatten normalized weights to match the unnormalized tensor.
+        w_tensor_normalized = tf.reshape(w_normalized, input.shape)
+        return w_tensor_normalized
 
 
 def dense(inputs, units, name="dense", reuse=None, apply_spectral_normalization=False):
