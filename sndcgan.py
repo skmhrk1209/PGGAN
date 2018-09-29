@@ -19,7 +19,7 @@ class Generator(object):
         self.deconv_params = deconv_params
         self.data_format = data_format
 
-    def __call__(self, inputs, training, name="generator", reuse=False):
+    def __call__(self, inputs, training, name="generator", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
@@ -91,7 +91,7 @@ class Discriminator(object):
         self.conv_params = conv_params
         self.data_format = data_format
 
-    def __call__(self, inputs, training, name="discriminator", reuse=False):
+    def __call__(self, inputs, training, name="discriminator", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 

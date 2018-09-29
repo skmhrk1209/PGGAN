@@ -121,7 +121,7 @@ class Model(object):
 
         uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
         print(uninitialized_variable_names)
-        uninitialized_variables = [tf.get_variable(name) for name in uninitialized_variable_names]
+        uninitialized_variables = [var for var in tf.global_variables() if session.run(tf.is_variable_initialized(var))]
 
         session.run(tf.variables_initializer(uninitialized_variables))
         print("uninitialized variables initialized")
