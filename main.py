@@ -4,13 +4,13 @@ from __future__ import print_function
 
 import tensorflow as tf
 import argparse
-import gan
-import dcgan
-import resnet
-import dataset
+from models import gan
+from archs import dcgan
+from data import dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
+parser.add_argument('--filenames', type=str, nargs="+", default=["data/train.tfrecord"], help="tfrecord filenames")
 parser.add_argument("--num_epochs", type=int, nargs="+", default=[2, 4, 8], help="number of training epochs")
 parser.add_argument("--batch_size", type=int, default=10, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
@@ -186,7 +186,7 @@ with tf.Session(config=config) as session:
             gan_model.reinitialize() if i else gan_model.initialize()
 
             gan_model.train(
-                filenames=["data/train.tfrecord"],
+                filenames=args.filenames,
                 num_epochs=num_epochs,
                 batch_size=args.batch_size,
                 buffer_size=args.buffer_size
