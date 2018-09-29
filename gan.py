@@ -48,7 +48,10 @@ class Model(object):
             )
 
             self.next_reals = self.dataset.get_next()
-            self.next_latents = tf.random_normal(shape=[self.batch_size, self.hyper_param.latent_size])
+            self.next_latents = tf.random_normal(
+                shape=[self.batch_size, self.hyper_param.latent_size],
+                dtype=tf.float32
+            )
 
             self.reals = tf.placeholder(
                 dtype=tf.float32,
@@ -99,19 +102,21 @@ class Model(object):
                 )
             )
 
-            interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
-            interpolates = self.reals + (self.fakes - self.reals) * interpolate_coefficients
-            interpolate_logits = self.discriminator(
+            self.interpolate_coefficients = tf.random_uniform(
+                shape=[self.batch_size, 1, 1, 1],
+                dtype=tf.float32
+            )
+            self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
+            self.interpolate_logits = self.discriminator(
                 inputs=interpolates,
                 training=self.training,
                 name="discriminator",
                 reuse=True
             )
 
-            gradients = tf.gradients(ys=interpolate_logits, xs=interpolates)[0]
-            slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3]) + 0.0001)
-
-            self.gradient_penalty = tf.reduce_mean(tf.square(slopes - 1.0))
+            self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
+            self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
+            self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
 
             self.generator_variables = tf.get_collection(
@@ -219,8 +224,6 @@ class Model(object):
                     for operation in tf.get_default_graph().get_operations()
                     if "training" in operation.name
                 ]
-
-                print(training_placeholder_names)
 
                 training_placeholders = [
                     tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
