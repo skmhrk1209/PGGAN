@@ -226,119 +226,123 @@ class Model(object):
         session = tf.get_default_session()
         writer = tf.summary.FileWriter(self.name, session.graph)
 
-        try:
+        print("training started")
 
-            print("training started")
+        start = time.time()
 
-            start = time.time()
+        # initialize dataset iterator
+        self.dataset.initialize(
+            filenames=filenames,
+            num_epochs=num_epochs,
+            batch_size=batch_size,
+            buffer_size=buffer_size
+        )
 
-            # initialize dataset iterator
-            self.dataset.initialize(
-                filenames=filenames,
-                num_epochs=num_epochs,
-                batch_size=batch_size,
-                buffer_size=buffer_size
-            )
+        ### [CAUTION] ###
+        # variables in pre-trained model depends placeholders that doesn't exist in this instance.
+        # so, search those placeholders in graph, and feed values to them.
+        latents_placeholder_names = [
+            "{}:0".format(operation.name)
+            for operation in tf.get_default_graph().get_operations()
+            if "latents" in operation.name
+        ]
 
-            ### [CAUTION] ###
-            # variables in pre-trained model depends placeholders that doesn't exist in this instance.
-            # so, search those placeholders in graph, and feed values to them.
-            latents_placeholder_names = [
-                "{}:0".format(operation.name)
-                for operation in tf.get_default_graph().get_operations()
-                if "latents" in operation.name
-            ]
+        training_placeholder_names = [
+            "{}:0".format(operation.name)
+            for operation in tf.get_default_graph().get_operations()
+            if "training" in operation.name
+        ]
 
-            training_placeholder_names = [
-                "{}:0".format(operation.name)
-                for operation in tf.get_default_graph().get_operations()
-                if "training" in operation.name
-            ]
+        latents_placeholders = [
+            tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
+            for latents_placeholder_name in latents_placeholder_names
+        ]
 
-            latents_placeholders = [
-                tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
-                for latents_placeholder_name in latents_placeholder_names
-            ]
+        training_placeholders = [
+            tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
+            for training_placeholder_name in training_placeholder_names
+        ]
 
-            training_placeholders = [
-                tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
-                for training_placeholder_name in training_placeholder_names
-            ]
+        for i in itertools.count():
 
-            for i in itertools.count():
+            feed_dict = {self.batch_size: batch_size}
 
-                feed_dict = {self.batch_size: batch_size}
+            try:
 
                 reals, latents = session.run(
                     fetches=[self.next_reals, self.next_latents],
                     feed_dict=feed_dict
                 )
 
-                feed_dict.update({self.reals: reals})
+            except tf.errors.OutOfRangeError:
 
-                feed_dict.update({
-                    latents_placeholder: latents
-                    for latents_placeholder in latents_placeholders
-                })
+                print("training ended")
+                break
 
-                feed_dict.update({
-                    training_placeholder: True
-                    for training_placeholder in training_placeholders
-                })
+            else:
 
-                session.run(
-                    fetches=[self.generator_train_op, self.discriminator_train_op],
+                if reals.shape[0] != batch_size:
+                    break
+
+            feed_dict.update({self.reals: reals})
+
+            feed_dict.update({
+                latents_placeholder: latents
+                for latents_placeholder in latents_placeholders
+            })
+
+            feed_dict.update({
+                training_placeholder: True
+                for training_placeholder in training_placeholders
+            })
+
+            session.run(
+                fetches=[self.generator_train_op, self.discriminator_train_op],
+                feed_dict=feed_dict
+            )
+
+            if i % 100 == 0:
+
+                generator_global_step, generator_loss = session.run(
+                    fetches=[self.generator_global_step, self.generator_loss],
                     feed_dict=feed_dict
                 )
+                print("global_step: {}, generator_loss: {:.2f}".format(
+                    generator_global_step,
+                    generator_loss
+                ))
 
-                if i % 100 == 0:
+                discriminator_global_step, discriminator_loss = session.run(
+                    fetches=[self.discriminator_global_step, self.discriminator_loss],
+                    feed_dict=feed_dict
+                )
+                print("global_step: {}, discriminator_loss: {:.2f}".format(
+                    discriminator_global_step,
+                    discriminator_loss
+                ))
 
-                    generator_global_step, generator_loss = session.run(
-                        fetches=[self.generator_global_step, self.generator_loss],
-                        feed_dict=feed_dict
+                summary = session.run(self.summary, feed_dict=feed_dict)
+                writer.add_summary(summary, global_step=generator_global_step)
+
+                fakes = session.run(self.fakes, feed_dict=feed_dict)
+                images = np.concatenate([reals, fakes], axis=2)
+                # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
+                images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
+
+                for j, image in enumerate(images):
+
+                    cv2.imshow("image", image)
+                    cv2.waitKey(100)
+                    # cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
+
+                if i % 1000 == 0:
+
+                    checkpoint = self.saver.save(
+                        sess=session,
+                        save_path=os.path.join(self.name, "model.ckpt"),
+                        global_step=generator_global_step
                     )
-                    print("global_step: {}, generator_loss: {:.2f}".format(
-                        generator_global_step,
-                        generator_loss
-                    ))
 
-                    discriminator_global_step, discriminator_loss = session.run(
-                        fetches=[self.discriminator_global_step, self.discriminator_loss],
-                        feed_dict=feed_dict
-                    )
-                    print("global_step: {}, discriminator_loss: {:.2f}".format(
-                        discriminator_global_step,
-                        discriminator_loss
-                    ))
-
-                    summary = session.run(self.summary, feed_dict=feed_dict)
-                    writer.add_summary(summary, global_step=generator_global_step)
-
-                    fakes = session.run(self.fakes, feed_dict=feed_dict)
-                    images = np.concatenate([reals, fakes], axis=2)
-                    # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
-                    images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
-
-                    print(fakes.shape)
-
-                    for j, image in enumerate(images):
-
-                        cv2.imshow("image", image)
-                        cv2.waitKey(100)
-                        # cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
-
-                    if i % 1000 == 0:
-
-                        checkpoint = self.saver.save(
-                            sess=session,
-                            save_path=os.path.join(self.name, "model.ckpt"),
-                            global_step=generator_global_step
-                        )
-
-                        stop = time.time()
-                        print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
-                        start = time.time()
-
-        except tf.errors.OutOfRangeError:
-
-            print("training ended")
+                    stop = time.time()
+                    print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
+                    start = time.time()
