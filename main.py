@@ -110,6 +110,10 @@ with tf.Session(config=config) as session:
         )
 
         gan_model.initialize()
+
+with tf.Session(config=config) as session:
+
+    if args.train:
         '''
         gan_model.train(
             filenames=["data/train.tfrecord"],
