@@ -38,6 +38,7 @@ class Model(object):
 
             self.batch_size = tf.placeholder(dtype=tf.int32, shape=[])
             self.training = tf.placeholder(dtype=tf.bool, shape=[])
+            print(self.training)
 
             self.next_reals = self.dataset.get_next()
             self.next_latents = tf.random_normal(shape=[self.batch_size, self.hyper_param.latent_size])
