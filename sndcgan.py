@@ -49,7 +49,7 @@ class Generator(object):
 
                 inputs = tf.transpose(inputs, [0, 3, 1, 2])
 
-            for i, deconv_param in enumerate(self.deconv_params):
+            for i, deconv_param in enumerate(self.deconv_params, 1):
 
                 inputs = ops.deconv2d(
                     inputs=inputs,
@@ -75,7 +75,7 @@ class Generator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="last_deconv2d_{}".format(len(self.deconv_params))
+                name="last_deconv2d_{}".format(len(self.deconv_params) + 1)
             )
 
             inputs = tf.nn.sigmoid(inputs)
@@ -103,13 +103,13 @@ class Discriminator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                name="first_conv2d_{}".format(len(self.conv_params)),
+                name="first_conv2d_{}".format(len(self.conv_params) + 1),
                 apply_spectral_normalization=True
             )
 
             inputs = tf.nn.leaky_relu(inputs)
 
-            for i, conv_param in enumerate(self.conv_params):
+            for i, conv_param in enumerate(self.conv_params, 1):
 
                 inputs = ops.conv2d(
                     inputs=inputs,
@@ -117,7 +117,7 @@ class Discriminator(object):
                     kernel_size=[4, 4],
                     strides=[2, 2],
                     data_format=self.data_format,
-                    name="conv2d_{}_1".format(len(self.conv_params) - 1 - i),
+                    name="conv2d_{}_1".format(len(self.conv_params) + 1 - i),
                     apply_spectral_normalization=True
                 )
 
@@ -129,7 +129,7 @@ class Discriminator(object):
                     kernel_size=[3, 3],
                     strides=[1, 1],
                     data_format=self.data_format,
-                    name="conv2d_{}_0".format(len(self.conv_params) - 1 - i),
+                    name="conv2d_{}_0".format(len(self.conv_params) + 1 - i),
                     apply_spectral_normalization=True
                 )
 
