@@ -64,74 +64,109 @@ class Dataset(dataset.Dataset):
         return image
 
 
-prev_gan_model = gan.Model(
-    dataset=Dataset(
-        image_size=[32, 32],
-        data_format=args.data_format
+gan_models = [
+    gan.Model(
+        dataset=Dataset(
+            image_size=[32, 32],
+            data_format=args.data_format
+        ),
+        generator=dcgan.Generator(
+            image_size=[32, 32],
+            filters=512,
+            deconv_params=[
+                dcgan.Generator.DeconvParam(filters=256),
+                # dcgan.Generator.DeconvParam(filters=128),
+                # dcgan.Generator.DeconvParam(filters=64)
+            ],
+            data_format=args.data_format,
+        ),
+        discriminator=dcgan.Discriminator(
+            filters=256,
+            conv_params=[
+                # dcgan.Discriminator.ConvParam(filters=128),
+                # dcgan.Discriminator.ConvParam(filters=256),
+                dcgan.Discriminator.ConvParam(filters=512)
+            ],
+            data_format=args.data_format
+        ),
+        hyper_param=gan.Model.HyperParam(
+            latent_size=128,
+            gradient_coefficient=1.0,
+            learning_rate=0.0002,
+            beta1=0.5,
+            beta2=0.999
+        ),
+        name=args.model_dir
     ),
-    generator=dcgan.Generator(
-        image_size=[32, 32],
-        filters=512,
-        deconv_params=[
-            dcgan.Generator.DeconvParam(filters=256),
-            # dcgan.Generator.DeconvParam(filters=128),
-            # dcgan.Generator.DeconvParam(filters=64)
-        ],
-        data_format=args.data_format,
+    gan.Model(
+        dataset=Dataset(
+            image_size=[64, 64],
+            data_format=args.data_format
+        ),
+        generator=dcgan.Generator(
+            image_size=[64, 64],
+            filters=512,
+            deconv_params=[
+                dcgan.Generator.DeconvParam(filters=256),
+                dcgan.Generator.DeconvParam(filters=128),
+                # dcgan.Generator.DeconvParam(filters=64)
+            ],
+            data_format=args.data_format,
+        ),
+        discriminator=dcgan.Discriminator(
+            filters=128,
+            conv_params=[
+                # dcgan.Discriminator.ConvParam(filters=128),
+                dcgan.Discriminator.ConvParam(filters=256),
+                dcgan.Discriminator.ConvParam(filters=512)
+            ],
+            data_format=args.data_format
+        ),
+        hyper_param=gan.Model.HyperParam(
+            latent_size=128,
+            gradient_coefficient=1.0,
+            learning_rate=0.0002,
+            beta1=0.5,
+            beta2=0.999
+        ),
+        name=args.model_dir,
+        reuse=tf.AUTO_REUSE
     ),
-    discriminator=dcgan.Discriminator(
-        filters=256,
-        conv_params=[
-            # dcgan.Discriminator.ConvParam(filters=128),
-            # dcgan.Discriminator.ConvParam(filters=256),
-            dcgan.Discriminator.ConvParam(filters=512)
-        ],
-        data_format=args.data_format
+    gan.Model(
+        dataset=Dataset(
+            image_size=[128, 128],
+            data_format=args.data_format
+        ),
+        generator=dcgan.Generator(
+            image_size=[128, 128],
+            filters=512,
+            deconv_params=[
+                dcgan.Generator.DeconvParam(filters=256),
+                dcgan.Generator.DeconvParam(filters=128),
+                dcgan.Generator.DeconvParam(filters=64)
+            ],
+            data_format=args.data_format,
+        ),
+        discriminator=dcgan.Discriminator(
+            filters=64,
+            conv_params=[
+                dcgan.Discriminator.ConvParam(filters=128),
+                dcgan.Discriminator.ConvParam(filters=256),
+                dcgan.Discriminator.ConvParam(filters=512)
+            ],
+            data_format=args.data_format
+        ),
+        hyper_param=gan.Model.HyperParam(
+            latent_size=128,
+            gradient_coefficient=1.0,
+            learning_rate=0.0002,
+            beta1=0.5,
+            beta2=0.999
+        ),
+        name=args.model_dir,
+        reuse=tf.AUTO_REUSE
     ),
-    hyper_param=gan.Model.HyperParam(
-        latent_size=128,
-        gradient_coefficient=1.0,
-        learning_rate=0.0002,
-        beta1=0.5,
-        beta2=0.999
-    ),
-    name=args.model_dir
-)
-
-next_gan_model = gan.Model(
-    dataset=Dataset(
-        image_size=[64, 64],
-        data_format=args.data_format
-    ),
-    generator=dcgan.Generator(
-        image_size=[64, 64],
-        filters=512,
-        deconv_params=[
-            dcgan.Generator.DeconvParam(filters=256),
-            dcgan.Generator.DeconvParam(filters=128),
-            # dcgan.Generator.DeconvParam(filters=64)
-        ],
-        data_format=args.data_format,
-    ),
-    discriminator=dcgan.Discriminator(
-        filters=128,
-        conv_params=[
-            # dcgan.Discriminator.ConvParam(filters=128),
-            dcgan.Discriminator.ConvParam(filters=256),
-            dcgan.Discriminator.ConvParam(filters=512)
-        ],
-        data_format=args.data_format
-    ),
-    hyper_param=gan.Model.HyperParam(
-        latent_size=128,
-        gradient_coefficient=1.0,
-        learning_rate=0.0002,
-        beta1=0.5,
-        beta2=0.999
-    ),
-    name=args.model_dir,
-    reuse=tf.AUTO_REUSE
-)
+]
 
 config = tf.ConfigProto(
     gpu_options=tf.GPUOptions(
@@ -146,20 +181,13 @@ with tf.Session(config=config) as session:
 
     if args.train:
 
-        prev_gan_model.initialize()
-        '''
-        prev_gan_model.train(
-            filenames=["data/train.tfrecord"],
-            batch_size=args.batch_size,
-            num_epochs=args.num_epochs,
-            buffer_size=args.buffer_size
-        )
-        '''
-        next_gan_model.reinitialize()
+        for i, gan_model in enumerate(gan_models):
 
-        next_gan_model.train(
-            filenames=["data/train.tfrecord"],
-            batch_size=args.batch_size,
-            num_epochs=args.num_epochs,
-            buffer_size=args.buffer_size
-        )
+            gan_model.reinitialize() if i else gan_model.initialize()
+
+            gan_model.train(
+                filenames=["data/train.tfrecord"],
+                batch_size=args.batch_size,
+                num_epochs=args.num_epochs,
+                buffer_size=args.buffer_size
+            )
