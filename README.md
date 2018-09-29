@@ -1,2 +1,2 @@
-## GAN with Spectral Normalization and Gradient Penalty
-### TensorFlow implementation of ["The GAN Landscape: Losses, Architectures, Regularization, and Normalization"](https://arxiv.org/pdf/1807.04720.pdf)
+## Progressive Growing GAN
+### TensorFlow implementation of ["Progressive Growing of GANs for Improved Quality, Stability, and Variation"](https://arxiv.org/pdf/1710.10196.pdf)
