@@ -319,6 +319,8 @@ class Model(object):
                     # images = [utils.scale(image, 0, 1, 0, 255) for image in images]
                     images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
 
+                    print(fakes.shape)
+
                     for j, image in enumerate(images):
 
                         cv2.imshow("image", image)
