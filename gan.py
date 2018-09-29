@@ -120,6 +120,7 @@ class Model(object):
         tf.get_variable_scope().reuse_variables()
 
         uninitialized_variable_names = session.run(tf.report_uninitialized_variables())
+        print(uninitialized_variable_names)
         uninitialized_variables = [tf.get_variable(name) for name in uninitialized_variable_names]
 
         session.run(tf.variables_initializer(uninitialized_variables))
