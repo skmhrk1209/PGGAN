@@ -79,16 +79,25 @@ class Model(object):
                 reuse=True
             )
 
-            self.generator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.fake_logits, labels=tf.ones_like(self.fake_logits)
-            ))
+            self.generator_loss = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.fake_logits,
+                    labels=tf.ones_like(self.fake_logits)
+                )
+            )
 
-            self.discriminator_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.real_logits, labels=tf.ones_like(self.real_logits)
-            ))
-            self.discriminator_loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                logits=self.fake_logits, labels=tf.zeros_like(self.fake_logits)
-            ))
+            self.discriminator_loss = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.real_logits,
+                    labels=tf.ones_like(self.real_logits)
+                )
+            )
+            self.discriminator_loss += tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.fake_logits,
+                    labels=tf.zeros_like(self.fake_logits)
+                )
+            )
 
             interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
             interpolates = self.reals + (self.fakes - self.reals) * interpolate_coefficients
