@@ -133,6 +133,8 @@ next_gan_model = gan.Model(
     reuse=tf.AUTO_REUSE
 )
 
+next_gan_model.summarize()
+
 config = tf.ConfigProto(
     gpu_options=tf.GPUOptions(
         visible_device_list=args.gpu,
