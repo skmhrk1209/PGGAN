@@ -73,93 +73,82 @@ config = tf.ConfigProto(
     allow_soft_placement=True
 )
 
+gan_model_0 = gan.Model(
+    model_dir=args.model_dir,
+    dataset=Dataset(
+        image_size=[64, 64],
+        data_format=args.data_format
+    ),
+    generator=sndcgan.Generator(
+        image_size=[64, 64],
+        filters=512,
+        deconv_params=[
+            sndcgan.Generator.DeconvParam(filters=256),
+            sndcgan.Generator.DeconvParam(filters=128),
+        ],
+        data_format=args.data_format,
+    ),
+    discriminator=sndcgan.Discriminator(
+        filters=128,
+        conv_params=[
+            sndcgan.Discriminator.ConvParam(filters=256),
+            sndcgan.Discriminator.ConvParam(filters=512)
+        ],
+        data_format=args.data_format
+    ),
+    hyper_param=gan.Model.HyperParam(
+        latent_size=128,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999
+    )
+)
+
+gan_model_1 = gan.Model(
+    model_dir=args.model_dir,
+    dataset=Dataset(
+        image_size=[128, 128],
+        data_format=args.data_format
+    ),
+    generator=sndcgan.Generator(
+        image_size=[128, 128],
+        filters=512,
+        deconv_params=[
+            sndcgan.Generator.DeconvParam(filters=256),
+            sndcgan.Generator.DeconvParam(filters=128),
+            sndcgan.Generator.DeconvParam(filters=64)
+        ],
+        data_format=args.data_format,
+    ),
+    discriminator=sndcgan.Discriminator(
+        filters=64,
+        conv_params=[
+            sndcgan.Discriminator.ConvParam(filters=128),
+            sndcgan.Discriminator.ConvParam(filters=256),
+            sndcgan.Discriminator.ConvParam(filters=512)
+        ],
+        data_format=args.data_format
+    ),
+    hyper_param=gan.Model.HyperParam(
+        latent_size=128,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999
+    ),
+    reuse=tf.AUTO_REUSE
+)
+
 with tf.Session(config=config) as session:
 
     if args.train:
 
-        gan_model = gan.Model(
-            model_dir=args.model_dir,
-            dataset=Dataset(
-                image_size=[64, 64],
-                data_format=args.data_format
-            ),
-            generator=sndcgan.Generator(
-                image_size=[64, 64],
-                filters=512,
-                deconv_params=[
-                    sndcgan.Generator.DeconvParam(filters=256),
-                    sndcgan.Generator.DeconvParam(filters=128),
-                ],
-                data_format=args.data_format,
-            ),
-            discriminator=sndcgan.Discriminator(
-                filters=128,
-                conv_params=[
-                    sndcgan.Discriminator.ConvParam(filters=256),
-                    sndcgan.Discriminator.ConvParam(filters=512)
-                ],
-                data_format=args.data_format
-            ),
-            hyper_param=gan.Model.HyperParam(
-                latent_size=128,
-                gradient_coefficient=1.0,
-                learning_rate=0.0002,
-                beta1=0.5,
-                beta2=0.999
-            )
-        )
+        gan_model_0.initialize()
 
-        gan_model.initialize()
+        gan_model_1.reinitialize()
 
-with tf.Session(config=config) as session:
-
-    if args.train:
-        '''
-        gan_model.train(
-            filenames=["data/train.tfrecord"],
-            batch_size=args.batch_size,
-            num_epochs=args.num_epochs,
-            buffer_size=args.buffer_size
-        )
-        '''
-        gan_model = gan.Model(
-            model_dir=args.model_dir,
-            dataset=Dataset(
-                image_size=[128, 128],
-                data_format=args.data_format
-            ),
-            generator=sndcgan.Generator(
-                image_size=[128, 128],
-                filters=512,
-                deconv_params=[
-                    sndcgan.Generator.DeconvParam(filters=256),
-                    sndcgan.Generator.DeconvParam(filters=128),
-                    sndcgan.Generator.DeconvParam(filters=64)
-                ],
-                data_format=args.data_format,
-            ),
-            discriminator=sndcgan.Discriminator(
-                filters=64,
-                conv_params=[
-                    sndcgan.Discriminator.ConvParam(filters=128),
-                    sndcgan.Discriminator.ConvParam(filters=256),
-                    sndcgan.Discriminator.ConvParam(filters=512)
-                ],
-                data_format=args.data_format
-            ),
-            hyper_param=gan.Model.HyperParam(
-                latent_size=128,
-                gradient_coefficient=1.0,
-                learning_rate=0.0002,
-                beta1=0.5,
-                beta2=0.999
-            ),
-            reuse=tf.AUTO_REUSE
-        )
-
-        gan_model.reinitialize()
-
-        gan_model.train(
+        gan_model_1.train(
             filenames=["data/train.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
@@ -168,7 +157,7 @@ with tf.Session(config=config) as session:
 
     if args.predict:
 
-        gan_model.predict(
+        gan_model_1.predict(
             filenames=["data/test.tfrecord"],
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
