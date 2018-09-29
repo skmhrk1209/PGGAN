@@ -34,7 +34,8 @@ class Generator(object):
             inputs = ops.batch_normalization(
                 inputs=inputs,
                 data_format=self.data_format,
-                training=training
+                training=training,
+                name="batch_normalization_0"
             )
 
             inputs = tf.nn.relu(inputs)
@@ -62,7 +63,8 @@ class Generator(object):
                 inputs = ops.batch_normalization(
                     inputs=inputs,
                     data_format=self.data_format,
-                    training=training
+                    training=training,
+                    name="batch_normalization_{}".format(i)
                 )
 
                 inputs = tf.nn.relu(inputs)

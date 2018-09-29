@@ -122,11 +122,10 @@ class Model(object):
         session = tf.get_default_session()
 
         uninitialized_variables = [
-            variable for variable in tf.global_variables(self.name)
+            variable
+            for variable in tf.global_variables(self.name)
             if not session.run(tf.is_variable_initialized(variable))
         ]
-
-        print(len(uninitialized_variables))
 
         session.run(tf.variables_initializer(uninitialized_variables))
         print("uninitialized variables in {} initialized".format(self.name))
@@ -159,8 +158,23 @@ class Model(object):
 
                 feed_dict.update({
                     self.latents: latents,
-                    self.reals: reals,
-                    self.training: True
+                    self.reals: reals
+                })
+
+                training_placeholder_names = [
+                    "{}:0".format(operation.name)
+                    for operation in tf.get_default_graph().get_operations()
+                    if "training" in operation.name
+                ]
+
+                training_placeholders = [
+                    tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
+                    for training_placeholder_name in training_placeholder_names
+                ]
+
+                feed_dict.update({
+                    training_placeholder: True
+                    for training_placeholder in training_placeholders
                 })
 
                 session.run(self.generator_train_op, feed_dict=feed_dict)

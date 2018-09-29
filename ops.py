@@ -315,28 +315,34 @@ def global_average_pooling2d(inputs, data_format):
     )
 
 
-def layer_normalization(inputs, data_format, training):
+def layer_normalization(inputs, data_format, training, name="layer_normalization", reuse=None):
 
     return tf.contrib.layers.layer_norm(
         inputs=inputs,
         center=True,
         scale=True,
-        trainable=True
+        trainable=True,
+        begin_norm_axis=1,
+        begin_params_axis=1 if data_format == "channels_first" else 3,
+        scope=name,
+        reuse=reuse
     )
 
 
-def instance_normalization(inputs, data_format, training):
+def instance_normalization(inputs, data_format, training, name="instance_normalization", reuse=None):
 
     return tf.contrib.layers.instance_norm(
         inputs=inputs,
         center=True,
         scale=True,
         trainable=True,
-        data_format="NCHW" if data_format == "channels_first" else "NHWC"
+        data_format="NCHW" if data_format == "channels_first" else "NHWC",
+        scope=name,
+        reuse=reuse
     )
 
 
-def batch_normalization(inputs, data_format, training):
+def batch_normalization(inputs, data_format, training, name="batch_normalization", reuse=None):
 
     return tf.contrib.layers.batch_norm(
         inputs=inputs,
@@ -344,5 +350,7 @@ def batch_normalization(inputs, data_format, training):
         scale=True,
         is_training=training,
         trainable=True,
-        data_format="NCHW" if data_format == "channels_first" else "NHWC"
+        data_format="NCHW" if data_format == "channels_first" else "NHWC",
+        scope=name,
+        reuse=reuse
     )
