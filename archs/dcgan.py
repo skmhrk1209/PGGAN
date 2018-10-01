@@ -98,9 +98,9 @@ def fixed_deconv2d(inputs, out_filters, in_filters, kernel_size, strides, data_f
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
 
-        output_shape = tf.shape(inputs) * strides
-        output_shape = (tf.concat([output_shape[0:1], [out_filters], output_shape[2:4]], axis=0) if data_format_abbr == "NCHW" else
-                        tf.concat([output_shape[0:1], output_shape[1:3], [out_filters]], axis=0))
+        input_shape = inputs.get_shape().as_list()
+        output_shape = ([-1, out_filters, input_shape[2] * strides[2], input_shape[3] * strides[3]] if data_format_abbr == "NCHW" else
+                        [-1, input_shape[1] * strides[1], input_shape[2] * strides[2], out_filters])
 
         inputs = tf.nn.conv2d_transpose(
             value=inputs,
