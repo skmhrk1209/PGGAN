@@ -305,22 +305,22 @@ def unpooling2d(inputs, pool_size, data_format):
         my implementation is complicated but more generic and faster
     '''
 
-    shape = tf.shape(inputs)
-
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    inputs = tf.reshape(inputs, shape=[-1, shape[0], shape[1], shape[2] * shape[3], 1])
+    shape = tf.shape(inputs)
+
+    inputs = tf.reshape(inputs, shape=[shape[0], shape[1], shape[2] * shape[3], 1])
 
     paddings = [[0, 0], [0, 0], [0, 0], [0, pool_size[1] - 1]]
     inputs = tf.pad(inputs, paddings=paddings, mode="CONSTANT", constant_values=0)
 
-    inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], shape[3] * pool_size[1]])
+    inputs = tf.reshape(inputs, shape=[shape[0], shape[1], shape[2], shape[3] * pool_size[1]])
 
     paddings = [[0, 0], [0, 0], [0, 0], [0, shape[3] * pool_size[1] * (pool_size[0] - 1)]]
     inputs = tf.pad(inputs, paddings=paddings, mode="CONSTANT", constant_values=0)
 
-    inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * pool_size[0], shape[3] * pool_size[1]])
+    inputs = tf.reshape(inputs, shape=[shape[0], shape[1], shape[2] * pool_size[0], shape[3] * pool_size[1]])
 
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 2, 3, 1])
@@ -331,13 +331,25 @@ def unpooling2d(inputs, pool_size, data_format):
 def upsampling2d(inputs, factors, data_format):
     ''' upsampling operation
 
-        this is just for convenience
+        this implementation is from nvidia
+        (https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py)
     '''
 
-    return tf.keras.layers.UpSampling2D(
-        size=factors,
-        data_format=data_format
-    )(inputs)
+    if data_format == "channels_last":
+        inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
+
+    shape = tf.shape(inputs)
+
+    inputs = tf.reshape(inputs, shape=[shape[0], shape[1], shape[2], 1, shape[3], 1])
+
+    inputs = tf.tile(inputs, [1, 1, 1, factors[0], 1, factors[1]])
+
+    inputs = tf.reshape(inputs, shape=[shape[0], shape[1], shape[2] * factors[0], shape[3] * factors[1]])
+
+    if data_format == "channels_last":
+        inputs = tf.transpose(inputs, perm=[0, 2, 3, 1])
+
+    return inputs
 
 
 def downsampling2d(inputs, factors, data_format):
