@@ -5,7 +5,7 @@ from __future__ import print_function
 import tensorflow as tf
 import argparse
 from models import gan
-from archs import dcgan
+from archs import dcgan, resnet
 from data import celeba
 
 parser = argparse.ArgumentParser()
@@ -14,7 +14,10 @@ parser.add_argument('--filenames', type=str, nargs="+", default=["train.tfrecord
 parser.add_argument("--num_epochs", type=int, default=10, help="number of training epochs")
 parser.add_argument("--batch_size", type=int, default=10, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
-parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
+parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"],
+                    default="channels_last", help="data_format")
+parser.add_argument('--architecture', type=str, choices=["dcgan", "resnet"],
+                    default="dcgan", help="architecture of generator and discriminator")
 parser.add_argument('--train', action="store_true", help="with training")
 parser.add_argument('--eval', action="store_true", help="with evaluation")
 parser.add_argument('--predict', action="store_true", help="with prediction")
@@ -23,18 +26,20 @@ args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+architecture = dcgan if args.architecture == "dcgan" else resnet
+
 gan_model = gan.Model(
     dataset=celeba.Dataset(
         image_size=[128, 128],
         data_format=args.data_format
     ),
-    generator=dcgan.Generator(
+    generator=architecture.Generator(
         min_resolution=4,
         max_resolution=128,
         max_filters=512,
         data_format=args.data_format,
     ),
-    discriminator=dcgan.Discriminator(
+    discriminator=architecture.Discriminator(
         min_resolution=4,
         max_resolution=128,
         max_filters=512,
