@@ -315,7 +315,7 @@ class Model(object):
             )
 
             coloring_index = session.run(
-                tf.assign(self.coloring_index, self.generator_global_step / 40000.0 + 1.0)
+                tf.assign(self.coloring_index, tf.divide(self.generator_global_step, 40000.0) + 1.0)
             )
 
             if i % 100 == 0:
