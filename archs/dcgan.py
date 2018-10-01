@@ -19,6 +19,115 @@ def log2(m, n):
     return x
 
 
+def fixed_conv2d(inputs, in_filters, out_filters, kernel_size, strides, data_format,
+                 name="conv2d", reuse=None, apply_spectral_normalization=False):
+    ''' convolution layer for spectral normalization
+        for weight normalization, use variable instead of tf.layers.conv2d
+    '''
+
+    with tf.variable_scope(name, reuse=reuse):
+
+        data_format_abbr = "NCHW" if data_format == "channels_first" else "NHWC"
+
+        kernel = tf.get_variable(
+            name="kernel",
+            shape=kernel_size + [in_filters, out_filters],
+            dtype=tf.float32,
+            initializer=tf.variance_scaling_initializer(),
+            trainable=True
+        )
+
+        if apply_spectral_normalization:
+
+            kernel = ops.spectral_normalization(
+                input=kernel,
+                name="spectral_normalization"
+            )
+
+        strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
+
+        inputs = tf.nn.conv2d(
+            input=inputs,
+            filter=kernel,
+            strides=strides,
+            padding="SAME",
+            data_format=data_format_abbr
+        )
+
+        bias = tf.get_variable(
+            name="bias",
+            shape=[out_filters],
+            dtype=tf.float32,
+            initializer=tf.zeros_initializer(),
+            trainable=True
+        )
+
+        inputs = tf.nn.bias_add(
+            value=inputs,
+            bias=bias,
+            data_format=data_format_abbr
+        )
+
+        return inputs
+
+
+def fixed_deconv2d(inputs, out_filters, in_filters, kernel_size, strides, data_format,
+                   name="deconv2d", reuse=None, apply_spectral_normalization=False):
+    ''' deconvolution layer for spectral normalization
+        for weight normalization, use variable instead of tf.layers.conv2d_transpose
+    '''
+
+    with tf.variable_scope(name, reuse=reuse):
+
+        data_format_abbr = "NCHW" if data_format == "channels_first" else "NHWC"
+
+        kernel = tf.get_variable(
+            name="kernel",
+            shape=kernel_size + [out_filters, in_filters],
+            dtype=tf.float32,
+            initializer=tf.variance_scaling_initializer(),
+            trainable=True
+        )
+
+        if apply_spectral_normalization:
+
+            kernel = ops.spectral_normalization(
+                input=kernel,
+                name="spectral_normalization"
+            )
+
+        strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
+
+        output_shape = tf.shape(inputs) * strides
+        output_shape = (tf.concat([output_shape[0:1], [out_filters], output_shape[2:4]], axis=0) if data_format_abbr == "NCHW" else
+                        tf.concat([output_shape[0:1], output_shape[1:3], [out_filters]], axis=0))
+
+        inputs = tf.nn.conv2d_transpose(
+            value=inputs,
+            filter=kernel,
+            output_shape=output_shape,
+            strides=strides,
+            padding="SAME",
+            data_format=data_format_abbr
+        )
+
+        bias = tf.get_variable(
+            name="bias",
+            shape=[out_filters],
+            dtype=tf.float32,
+            initializer=tf.zeros_initializer(),
+            trainable=True
+        )
+
+        inputs = tf.nn.bias_add(
+            value=inputs,
+            bias=bias,
+            data_format=data_format_abbr
+        )
+
+        return inputs
+
+
 class Generator(object):
     '''
     Progressive Growing GAN Architecture
@@ -187,9 +296,10 @@ class Generator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            inputs = ops.deconv2d(
+            inputs = fixed_deconv2d(
                 inputs=inputs,
-                filters=self.max_filters >> index,
+                out_filters=self.max_filters >> index,
+                in_filters=self.max_filters >> (index - 1),
                 kernel_size=[4, 4],
                 strides=[2, 2],
                 data_format=self.data_format
@@ -209,9 +319,10 @@ class Generator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            inputs = ops.deconv2d(
+            inputs = fixed_deconv2d(
                 inputs=inputs,
-                filters=3,
+                out_filters=3,
+                in_filters=self.max_filters >> (index - 1),
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format
@@ -367,9 +478,10 @@ class Discriminator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            inputs = ops.conv2d(
+            inputs = fixed_conv2d(
                 inputs=inputs,
-                filters=self.max_filters >> (index - 1),
+                in_filters=self.max_filters >> index,
+                out_filters=self.max_filters >> (index - 1),
                 kernel_size=[4, 4],
                 strides=[2, 2],
                 data_format=self.data_format,
@@ -384,9 +496,10 @@ class Discriminator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            inputs = ops.conv2d(
+            inputs = fixed_conv2d(
                 inputs=inputs,
-                filters=self.max_filters >> (index - 1),
+                in_filters=3,
+                out_filters=self.max_filters >> (index - 1),
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
