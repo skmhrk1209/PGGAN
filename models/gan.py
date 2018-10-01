@@ -314,8 +314,6 @@ class Model(object):
 
             if i % 100 == 0:
 
-                print("coloring_index: {}".format(coloring_index))
-
                 generator_global_step, generator_loss = session.run(
                     [self.generator_global_step, self.generator_loss],
                     feed_dict=feed_dict
