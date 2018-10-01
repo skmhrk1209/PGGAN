@@ -310,6 +310,7 @@ class Discriminator(object):
                             data_format=self.data_format
                         )
 
+                        print(feature_maps.name)
                         print(feature_maps.shape)
 
                         return grow(feature_maps, images, index - 1)
