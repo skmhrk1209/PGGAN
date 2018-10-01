@@ -304,19 +304,6 @@ class Discriminator(object):
                             training=training
                         )
 
-                        feature_maps = tf.case(
-                            pred_fn_pairs={
-                                tf.greater(index, floored_coloring_index): lambda: feature_maps,
-                                tf.less(index, floored_coloring_index): lambda: feature_maps
-                            },
-                            default=lambda: lerp(
-                                a=feature_maps,
-                                b=feature_maps,
-                                t=coloring_index - index
-                            ),
-                            exclusive=True
-                        )
-
                         images = ops.downsampling2d(
                             inputs=images,
                             factors=[2, 2],

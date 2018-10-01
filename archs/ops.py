@@ -334,7 +334,7 @@ def upsampling2d(inputs, factors, data_format):
         this implementation is from nvidia
         (https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py)
     '''
-
+    '''
     shape = tf.shape(inputs)
 
     if data_format == "channels_last":
@@ -350,6 +350,8 @@ def upsampling2d(inputs, factors, data_format):
         inputs = tf.transpose(inputs, perm=[0, 2, 3, 1])
 
     return inputs
+    '''
+    return tf.keras.layers.UpSampling2D(factors, data_format)(inputs)
 
 
 def downsampling2d(inputs, factors, data_format):
