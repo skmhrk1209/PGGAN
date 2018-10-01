@@ -302,7 +302,7 @@ def unpooling2d(inputs, pool_size, data_format):
         authors used unpool function from github
         (https://github.com/tensorflow/tensorflow/issues/2169)
 
-        my implementation is complicated but more generic and faster
+        my implementation is better
     '''
 
     if data_format == "channels_last":
