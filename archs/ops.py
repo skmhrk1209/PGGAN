@@ -137,9 +137,6 @@ def conv2d(inputs, filters, kernel_size, strides, data_format,
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
 
-        print(kernel.shape)
-        print(inputs.shape)
-
         inputs = tf.nn.conv2d(
             input=inputs,
             filter=kernel,
