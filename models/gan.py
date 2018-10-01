@@ -120,7 +120,7 @@ class Model(object):
                     labels=tf.zeros_like(self.fake_logits)
                 )
             )
-            
+
             # add WGAN-GP gradient penalty to discriminator loss
             # slopes throws NaN (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
             # so add epsilon inside sqrt()
@@ -133,13 +133,13 @@ class Model(object):
                 name="discriminator",
                 reuse=True
             )
-            
+
             self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
             self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
 
             self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
-            
+
             self.generator_variables = tf.get_collection(
                 key=tf.GraphKeys.TRAINABLE_VARIABLES,
                 scope="{}/generator".format(self.name)
@@ -315,7 +315,7 @@ class Model(object):
             )
 
             coloring_index = session.run(
-                tf.assign(self.coloring_index, self.generator_global_step / 40000.0)
+                tf.assign(self.coloring_index, self.generator_global_step / 40000.0 + 1.0)
             )
 
             if i % 100 == 0:
