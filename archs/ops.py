@@ -335,7 +335,7 @@ def upsampling2d(inputs, factors, data_format):
         (https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py)
     '''
     
-    shape = tf.shape(inputs)
+    shape = inputs.shape.as_list()
 
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
