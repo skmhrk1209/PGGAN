@@ -312,8 +312,6 @@ class Model(object):
                 feed_dict=feed_dict
             )
 
-            print("coloring_index: {}".format(session.run(self.coloring_index)))
-
             if i % 100 == 0:
 
                 generator_global_step, generator_loss = session.run(
@@ -333,6 +331,9 @@ class Model(object):
                     discriminator_global_step,
                     discriminator_loss
                 ))
+
+                coloring_index = session.run(self.coloring_index)
+                print("coloring_index: {}".format(coloring_index))
 
                 summary = session.run(self.summary, feed_dict=feed_dict)
                 writer.add_summary(summary, global_step=generator_global_step)
