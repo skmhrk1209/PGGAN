@@ -19,7 +19,8 @@ class Model(object):
             "gradient_coefficient",
             "learning_rate",
             "beta1",
-            "beta2"
+            "beta2",
+            "coloring_index_fn"
         )
     )
 
@@ -63,10 +64,9 @@ class Model(object):
             )
 
             # "coloring_index" for Progressive Growing GAN Architecture
-            self.coloring_index = tf.divide(
-                x=tf.cast(self.generator_global_step, tf.float32),
-                y=tf.constant(100000.0)
-            ) + tf.constant(1.0)
+            self.coloring_index = self.hyper_param.coloring_index_fn(
+                global_step=tf.cast(self.discriminator_global_step, tf.float32)
+            )
 
             ### [CAUTION] ###
             # if assign get_next() to input data tensor,

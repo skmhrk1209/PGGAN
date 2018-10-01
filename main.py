@@ -45,7 +45,11 @@ gan_model = gan.Model(
         gradient_coefficient=1.0,
         learning_rate=0.0002,
         beta1=0.5,
-        beta2=0.999
+        beta2=0.999,
+        coloring_index_fn=(
+            lambda global_step:
+            global_step / 100000.0 + 1.0
+        )
     ),
     name=args.model_dir
 )
