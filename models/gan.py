@@ -65,7 +65,7 @@ class Model(object):
             # "coloring_index" for Progressive Growing GAN Architecture
             self.coloring_index = tf.divide(
                 x=tf.cast(self.generator_global_step, tf.float32),
-                y=tf.constant(40000.0)
+                y=tf.constant(100000.0)
             ) + tf.constant(1.0)
 
             ### [CAUTION] ###
