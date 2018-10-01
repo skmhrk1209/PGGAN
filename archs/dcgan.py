@@ -20,6 +20,15 @@ def log2(m, n):
 
 
 class Generator(object):
+    '''
+    Progressive Growing GAN Architecture
+    [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
+    (https://arxiv.org/pdf/1710.10196.pdf)
+
+    based on SNDCGAN
+    [Spectral Normalization for Generative Adversarial Networks]
+    (https://arxiv.org/pdf/1802.05957.pdf)
+    '''
 
     def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
@@ -33,110 +42,113 @@ class Generator(object):
         with tf.variable_scope(name, reuse=reuse):
 
             def grow(inputs, index):
+                '''
+                    very complicated but efficient architecture
+                    each layer has two output paths: feature_maps and images
+                    whether which path is evaluated at runtime
+                    depends on variable "coloring_index"
+                    but, all possible pathes must be constructed at compile time
+                '''
 
-                ceiled_coloring_index = tf.cast(tf.ceil(coloring_index), tf.int32)
+                with tf.variable_scope("layer_{}".format(index)):
 
-                if index == 0:
+                    ceiled_coloring_index = tf.cast(tf.ceil(coloring_index), tf.int32)
 
-                    feature_maps = self.dense_block(
-                        inputs=inputs,
-                        index=index,
-                        training=training,
-                        name="dense_block_{}".format(index)
-                    )
+                    if index == 0:
 
-                    return feature_maps
+                        feature_maps = self.dense_block(
+                            inputs=inputs,
+                            index=index,
+                            training=training
+                        )
 
-                elif index == 1:
+                        return feature_maps
 
-                    feature_maps = grow(inputs, index - 1)
+                    elif index == 1:
 
-                    images = self.color_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                        feature_maps = grow(inputs, index - 1)
 
-                    feature_maps = self.deconv2d_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="deconv2d_block_{}".format(index)
-                    )
+                        images = self.color_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training
+                        )
 
-                    return feature_maps, images
+                        feature_maps = self.deconv2d_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training
+                        )
 
-                elif index == log2(self.min_resolution, self.max_resolution) + 1:
+                        return feature_maps, images
 
-                    feature_maps, images = grow(inputs, index - 1)
+                    elif index == log2(self.min_resolution, self.max_resolution) + 1:
 
-                    old_images = ops.upsampling2d(
-                        inputs=images,
-                        factors=[2, 2],
-                        data_format=self.data_format
-                    )
+                        feature_maps, images = grow(inputs, index - 1)
 
-                    new_images = self.color_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                        old_images = ops.upsampling2d(
+                            inputs=images,
+                            factors=[2, 2],
+                            data_format=self.data_format
+                        )
 
-                    images = tf.case(
-                        pred_fn_pairs={
-                            tf.greater(index, ceiled_coloring_index): lambda: old_images,
-                            tf.less(index, ceiled_coloring_index): lambda: new_images
-                        },
-                        default=lambda: lerp(
-                            a=old_images,
-                            b=new_images,
-                            t=coloring_index - (index - 1)
-                        ),
-                        exclusive=True
-                    )
+                        new_images = self.color_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training
+                        )
 
-                    return images
+                        images = tf.case(
+                            pred_fn_pairs={
+                                tf.greater(index, ceiled_coloring_index): lambda: old_images,
+                                tf.less(index, ceiled_coloring_index): lambda: new_images
+                            },
+                            default=lambda: lerp(
+                                a=old_images,
+                                b=new_images,
+                                t=coloring_index - (index - 1)
+                            ),
+                            exclusive=True
+                        )
 
-                else:
+                        return images
 
-                    feature_maps, images = grow(inputs, index - 1)
+                    else:
 
-                    old_images = ops.upsampling2d(
-                        inputs=images,
-                        factors=[2, 2],
-                        data_format=self.data_format
-                    )
+                        feature_maps, images = grow(inputs, index - 1)
 
-                    new_images = self.color_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                        old_images = ops.upsampling2d(
+                            inputs=images,
+                            factors=[2, 2],
+                            data_format=self.data_format
+                        )
 
-                    images = tf.case(
-                        pred_fn_pairs={
-                            tf.greater(index, ceiled_coloring_index): lambda: old_images,
-                            tf.less(index, ceiled_coloring_index): lambda: new_images
-                        },
-                        default=lambda: lerp(
-                            a=old_images,
-                            b=new_images,
-                            t=coloring_index - (index - 1)
-                        ),
-                        exclusive=True
-                    )
+                        new_images = self.color_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training
+                        )
 
-                    feature_maps = self.deconv2d_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="deconv2d_block_{}".format(index)
-                    )
+                        images = tf.case(
+                            pred_fn_pairs={
+                                tf.greater(index, ceiled_coloring_index): lambda: old_images,
+                                tf.less(index, ceiled_coloring_index): lambda: new_images
+                            },
+                            default=lambda: lerp(
+                                a=old_images,
+                                b=new_images,
+                                t=coloring_index - (index - 1)
+                            ),
+                            exclusive=True
+                        )
 
-                    return feature_maps, images
+                        feature_maps = self.deconv2d_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training
+                        )
+
+                        return feature_maps, images
 
             return grow(inputs, log2(self.min_resolution, self.max_resolution) + 1)
 
@@ -211,6 +223,15 @@ class Generator(object):
 
 
 class Discriminator(object):
+    '''
+    Progressive Growing GAN Architecture
+    [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
+    (https://arxiv.org/pdf/1710.10196.pdf)
+
+    based on SNDCGAN
+    [Spectral Normalization for Generative Adversarial Networks]
+    (https://arxiv.org/pdf/1802.05957.pdf)
+    '''
 
     def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
@@ -224,104 +245,113 @@ class Discriminator(object):
         with tf.variable_scope(name, reuse=reuse):
 
             def grow(feature_maps, images, index):
+                '''
+                    very complicated but efficient architecture
+                    each layer has two output paths: feature_maps and images
+                    whether which path is evaluated at runtime
+                    depends on variable "coloring_index"
+                    but, all possible pathes must be constructed at compile time
+                '''
 
-                floored_coloring_index = tf.cast(tf.floor(coloring_index), tf.int32)
+                with tf.variable_scope("layer_{}".format(index)):
 
-                if index == 0:
+                    floored_coloring_index = tf.cast(tf.floor(coloring_index), tf.int32)
 
-                    logits = self.dense_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="dense_block_{}".format(index)
-                    )
+                    if index == 0:
 
-                    return logits
+                        logits = self.dense_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training,
+                            name="dense_block_{}".format(index)
+                        )
 
-                elif index == 1:
+                        return logits
 
-                    old_feature_maps = self.color_block(
-                        inputs=images,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                    elif index == 1:
 
-                    new_feature_maps = self.conv2d_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="conv2d_block_{}".format(index)
-                    )
+                        old_feature_maps = self.color_block(
+                            inputs=images,
+                            index=index,
+                            training=training,
+                            name="color_block_{}".format(index)
+                        )
 
-                    feature_maps = tf.case(
-                        pred_fn_pairs={
-                            tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
-                            tf.less(index, floored_coloring_index): lambda: new_feature_maps
-                        },
-                        default=lambda: lerp(
-                            a=old_feature_maps,
-                            b=new_feature_maps,
-                            t=coloring_index - index
-                        ),
-                        exclusive=True
-                    )
+                        new_feature_maps = self.conv2d_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training,
+                            name="conv2d_block_{}".format(index)
+                        )
 
-                    return grow(feature_maps, None, index - 1)
+                        feature_maps = tf.case(
+                            pred_fn_pairs={
+                                tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
+                                tf.less(index, floored_coloring_index): lambda: new_feature_maps
+                            },
+                            default=lambda: lerp(
+                                a=old_feature_maps,
+                                b=new_feature_maps,
+                                t=coloring_index - index
+                            ),
+                            exclusive=True
+                        )
 
-                elif index == log2(self.min_resolution, self.max_resolution) + 1:
+                        return grow(feature_maps, None, index - 1)
 
-                    feature_maps = self.color_block(
-                        inputs=images,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                    elif index == log2(self.min_resolution, self.max_resolution) + 1:
 
-                    images = ops.downsampling2d(
-                        inputs=images,
-                        factors=[2, 2],
-                        data_format=self.data_format
-                    )
+                        feature_maps = self.color_block(
+                            inputs=images,
+                            index=index,
+                            training=training,
+                            name="color_block_{}".format(index)
+                        )
 
-                    return grow(feature_maps, images, index - 1)
+                        images = ops.downsampling2d(
+                            inputs=images,
+                            factors=[2, 2],
+                            data_format=self.data_format
+                        )
 
-                else:
+                        return grow(feature_maps, images, index - 1)
 
-                    old_feature_maps = self.color_block(
-                        inputs=images,
-                        index=index,
-                        training=training,
-                        name="color_block_{}".format(index)
-                    )
+                    else:
 
-                    new_feature_maps = self.conv2d_block(
-                        inputs=feature_maps,
-                        index=index,
-                        training=training,
-                        name="conv2d_block_{}".format(index)
-                    )
+                        old_feature_maps = self.color_block(
+                            inputs=images,
+                            index=index,
+                            training=training,
+                            name="color_block_{}".format(index)
+                        )
 
-                    feature_maps = tf.case(
-                        pred_fn_pairs={
-                            tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
-                            tf.less(index, floored_coloring_index): lambda: new_feature_maps
-                        },
-                        default=lambda: lerp(
-                            a=old_feature_maps,
-                            b=new_feature_maps,
-                            t=coloring_index - index
-                        ),
-                        exclusive=True
-                    )
+                        new_feature_maps = self.conv2d_block(
+                            inputs=feature_maps,
+                            index=index,
+                            training=training,
+                            name="conv2d_block_{}".format(index)
+                        )
 
-                    images = ops.downsampling2d(
-                        inputs=images,
-                        factors=[2, 2],
-                        data_format=self.data_format
-                    )
+                        feature_maps = tf.case(
+                            pred_fn_pairs={
+                                tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
+                                tf.less(index, floored_coloring_index): lambda: new_feature_maps
+                            },
+                            default=lambda: lerp(
+                                a=old_feature_maps,
+                                b=new_feature_maps,
+                                t=coloring_index - index
+                            ),
+                            exclusive=True
+                        )
 
-                    return grow(feature_maps, images, index - 1)
+                        images = ops.downsampling2d(
+                            inputs=images,
+                            factors=[2, 2],
+                            data_format=self.data_format
+                        )
+
+                        return grow(feature_maps, images, index - 1)
 
             return grow(None, inputs, log2(self.min_resolution, self.max_resolution) + 1)
 

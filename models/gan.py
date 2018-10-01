@@ -39,7 +39,7 @@ class Model(object):
                 name="coloring_index",
                 shape=[],
                 dtype=tf.float32,
-                initializer=tf.zeros_initializer(),
+                initializer=tf.ones_initializer(),
                 trainable=False
             )
 
