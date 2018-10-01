@@ -35,14 +35,6 @@ class Model(object):
             self.discriminator = discriminator
             self.hyper_param = hyper_param
 
-            self.coloring_index = tf.get_variable(
-                name="coloring_index",
-                shape=[],
-                dtype=tf.float32,
-                initializer=tf.ones_initializer(),
-                trainable=False
-            )
-
             self.batch_size = tf.placeholder(
                 dtype=tf.int32,
                 shape=[],
@@ -53,6 +45,28 @@ class Model(object):
                 shape=[],
                 name="training"
             )
+
+            # it's ok generator global step and discriminator global step isn't same
+            self.generator_global_step = tf.get_variable(
+                name="generator_global_step",
+                shape=[],
+                dtype=tf.int32,
+                initializer=tf.zeros_initializer(),
+                trainable=False
+            )
+            self.discriminator_global_step = tf.get_variable(
+                name="discriminator_global_step",
+                shape=[],
+                dtype=tf.int32,
+                initializer=tf.zeros_initializer(),
+                trainable=False
+            )
+
+            # "coloring_index" for Progressive Growing GAN Architecture
+            self.coloring_index = tf.divide(
+                x=tf.cast(self.generator_global_step, tf.float32),
+                y=tf.constant(40000.0)
+            ) + tf.constant(1.0)
 
             ### [CAUTION] ###
             # if assign get_next() to input data tensor,
@@ -147,22 +161,6 @@ class Model(object):
             self.discriminator_variables = tf.get_collection(
                 key=tf.GraphKeys.TRAINABLE_VARIABLES,
                 scope="{}/discriminator".format(self.name)
-            )
-
-            # it's ok generator global step and discriminator global step isn't same
-            self.generator_global_step = tf.get_variable(
-                name="generator_global_step",
-                shape=[],
-                dtype=tf.int32,
-                initializer=tf.zeros_initializer(),
-                trainable=False
-            )
-            self.discriminator_global_step = tf.get_variable(
-                name="discriminator_global_step",
-                shape=[],
-                dtype=tf.int32,
-                initializer=tf.zeros_initializer(),
-                trainable=False
             )
 
             # tune hyper parameter learning rate, beta1, beta2
@@ -312,10 +310,6 @@ class Model(object):
             session.run(
                 [self.generator_train_op, self.discriminator_train_op],
                 feed_dict=feed_dict
-            )
-
-            coloring_index = session.run(
-                tf.assign(self.coloring_index, tf.divide(self.generator_global_step, 40000.0) + 1.0)
             )
 
             if i % 100 == 0:
