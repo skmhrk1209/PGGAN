@@ -331,27 +331,13 @@ def unpooling2d(inputs, pool_size, data_format):
 def upsampling2d(inputs, factors, data_format):
     ''' upsampling operation
 
-        this implementation is from nvidia
-        (https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py)
+        this is just for convenience
     '''
-    
-    shape = tf.shape(inputs)
 
-    if data_format == "channels_last":
-        inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
-
-    inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], 1, shape[3], 1])
-
-    inputs = tf.tile(inputs, [1, 1, 1, factors[0], 1, factors[1]])
-
-    inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * factors[0], shape[3] * factors[1]])
-
-    if data_format == "channels_last":
-        inputs = tf.transpose(inputs, perm=[0, 2, 3, 1])
-
-    return inputs
-    
-    #return tf.keras.layers.UpSampling2D(factors, data_format)(inputs)
+    return tf.keras.layers.UpSampling2D(
+        size=factors,
+        data_format=data_format
+    )(inputs)
 
 
 def downsampling2d(inputs, factors, data_format):
