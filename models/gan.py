@@ -35,6 +35,14 @@ class Model(object):
             self.discriminator = discriminator
             self.hyper_param = hyper_param
 
+            self.coloring_index = tf.get_variable(
+                name="coloring_index",
+                shape=[],
+                dtype=tf.float32,
+                initializer=tf.zeros_initializer(),
+                trainable=False
+            )
+
             self.batch_size = tf.placeholder(
                 dtype=tf.int32,
                 shape=[],
@@ -72,17 +80,20 @@ class Model(object):
 
             self.fakes = generator(
                 inputs=self.latents,
+                coloring_index=self.coloring_index,
                 training=self.training,
                 name="generator"
             )
 
             self.real_logits = discriminator(
                 inputs=self.reals,
+                coloring_index=self.coloring_index,
                 training=self.training,
                 name="discriminator"
             )
             self.fake_logits = discriminator(
                 inputs=self.fakes,
+                coloring_index=self.coloring_index,
                 training=self.training,
                 name="discriminator",
                 reuse=True
@@ -109,20 +120,26 @@ class Model(object):
                     labels=tf.zeros_like(self.fake_logits)
                 )
             )
-
+            
             # add WGAN-GP gradient penalty to discriminator loss
             # slopes throws NaN (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
             # so add epsilon inside sqrt()
             self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
             self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
-            self.interpolate_logits = discriminator(inputs=self.interpolates, training=self.training, name="discriminator", reuse=True)
-
+            self.interpolate_logits = discriminator(
+                inputs=self.interpolates,
+                training=self.training,
+                coloring_index=self.coloring_index,
+                name="discriminator",
+                reuse=True
+            )
+            
             self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
             self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
 
             self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
-
+            
             self.generator_variables = tf.get_collection(
                 key=tf.GraphKeys.TRAINABLE_VARIABLES,
                 scope="{}/generator".format(self.name)
@@ -297,7 +314,13 @@ class Model(object):
                 feed_dict=feed_dict
             )
 
+            coloring_index = session.run(
+                tf.assign(self.coloring_index, self.generator_global_step / 40000.0)
+            )
+
             if i % 100 == 0:
+
+                print("coloring_index: {}".format(coloring_index))
 
                 generator_global_step, generator_loss = session.run(
                     [self.generator_global_step, self.generator_loss],

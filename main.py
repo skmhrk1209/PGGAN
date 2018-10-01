@@ -11,7 +11,7 @@ from data import celeba
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
 parser.add_argument('--filenames', type=str, nargs="+", default=["data/train.tfrecord"], help="tfrecord filenames")
-parser.add_argument("--num_epochs", type=int, nargs="+", default=[2, 4, 8], help="number of training epochs")
+parser.add_argument("--num_epochs", type=int, default=10, help="number of training epochs")
 parser.add_argument("--batch_size", type=int, default=10, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
 parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
@@ -23,109 +23,32 @@ args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-gan_models = [
-    gan.Model(
-        dataset=celeba.Dataset(
-            image_size=[32, 32],
-            data_format=args.data_format
-        ),
-        generator=dcgan.Generator(
-            image_size=[32, 32],
-            filters=512,
-            deconv_params=[
-                dcgan.Generator.DeconvParam(filters=256),
-                # dcgan.Generator.DeconvParam(filters=128),
-                # dcgan.Generator.DeconvParam(filters=64)
-            ],
-            data_format=args.data_format,
-        ),
-        discriminator=dcgan.Discriminator(
-            filters=256,
-            conv_params=[
-                # dcgan.Discriminator.ConvParam(filters=128),
-                # dcgan.Discriminator.ConvParam(filters=256),
-                dcgan.Discriminator.ConvParam(filters=512)
-            ],
-            data_format=args.data_format
-        ),
-        hyper_param=gan.Model.HyperParam(
-            latent_size=128,
-            gradient_coefficient=1.0,
-            learning_rate=0.0002,
-            beta1=0.5,
-            beta2=0.999
-        ),
-        name=args.model_dir
+gan_model = gan.Model(
+    dataset=celeba.Dataset(
+        image_size=[128, 128],
+        data_format=args.data_format
     ),
-    gan.Model(
-        dataset=celeba.Dataset(
-            image_size=[64, 64],
-            data_format=args.data_format
-        ),
-        generator=dcgan.Generator(
-            image_size=[64, 64],
-            filters=512,
-            deconv_params=[
-                dcgan.Generator.DeconvParam(filters=256),
-                dcgan.Generator.DeconvParam(filters=128),
-                # dcgan.Generator.DeconvParam(filters=64)
-            ],
-            data_format=args.data_format,
-        ),
-        discriminator=dcgan.Discriminator(
-            filters=128,
-            conv_params=[
-                # dcgan.Discriminator.ConvParam(filters=128),
-                dcgan.Discriminator.ConvParam(filters=256),
-                dcgan.Discriminator.ConvParam(filters=512)
-            ],
-            data_format=args.data_format
-        ),
-        hyper_param=gan.Model.HyperParam(
-            latent_size=128,
-            gradient_coefficient=1.0,
-            learning_rate=0.0002,
-            beta1=0.5,
-            beta2=0.999
-        ),
-        name=args.model_dir,
-        reuse=tf.AUTO_REUSE
+    generator=dcgan.Generator(
+        min_resolution=4,
+        max_resolution=128,
+        max_filters=512,
+        data_format=args.data_format,
     ),
-    gan.Model(
-        dataset=celeba.Dataset(
-            image_size=[128, 128],
-            data_format=args.data_format
-        ),
-        generator=dcgan.Generator(
-            image_size=[128, 128],
-            filters=512,
-            deconv_params=[
-                dcgan.Generator.DeconvParam(filters=256),
-                dcgan.Generator.DeconvParam(filters=128),
-                dcgan.Generator.DeconvParam(filters=64)
-            ],
-            data_format=args.data_format,
-        ),
-        discriminator=dcgan.Discriminator(
-            filters=64,
-            conv_params=[
-                dcgan.Discriminator.ConvParam(filters=128),
-                dcgan.Discriminator.ConvParam(filters=256),
-                dcgan.Discriminator.ConvParam(filters=512)
-            ],
-            data_format=args.data_format
-        ),
-        hyper_param=gan.Model.HyperParam(
-            latent_size=128,
-            gradient_coefficient=1.0,
-            learning_rate=0.0002,
-            beta1=0.5,
-            beta2=0.999
-        ),
-        name=args.model_dir,
-        reuse=tf.AUTO_REUSE
+    discriminator=dcgan.Discriminator(
+        min_resolution=4,
+        max_resolution=128,
+        max_filters=512,
+        data_format=args.data_format
     ),
-]
+    hyper_param=gan.Model.HyperParam(
+        latent_size=128,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999
+    ),
+    name=args.model_dir
+)
 
 config = tf.ConfigProto(
     gpu_options=tf.GPUOptions(
@@ -140,13 +63,11 @@ with tf.Session(config=config) as session:
 
     if args.train:
 
-        for i, (gan_model, num_epochs) in enumerate(zip(gan_models, args.num_epochs)):
+        gan_model.initialize()
 
-            gan_model.reinitialize() if i else gan_model.initialize()
-
-            gan_model.train(
-                filenames=args.filenames,
-                num_epochs=num_epochs,
-                batch_size=args.batch_size,
-                buffer_size=args.buffer_size
-            )
+        gan_model.train(
+            filenames=args.filenames,
+            num_epochs=args.num_epochs,
+            batch_size=args.batch_size,
+            buffer_size=args.buffer_size
+        )

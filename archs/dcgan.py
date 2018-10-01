@@ -8,74 +8,201 @@ import collections
 from . import ops
 
 
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+
+def log2(m, n):
+    x = 0
+    while (m << x) < n:
+        x += 1
+    return x
+
+
 class Generator(object):
 
-    DeconvParam = collections.namedtuple("DeconvParam", ("filters"))
+    def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
-    def __init__(self, image_size, filters, deconv_params, data_format):
-
-        self.image_size = image_size
-        self.filters = filters
-        self.deconv_params = deconv_params
+        self.min_resolution = min_resolution
+        self.max_resolution = max_resolution
+        self.max_filters = max_filters
         self.data_format = data_format
 
-    def __call__(self, inputs, training, name="generator", reuse=None):
+    def __call__(self, inputs, coloring_index, training, name="generator", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            seed_size = (np.array(self.image_size) >> len(self.deconv_params)).tolist()
+            def grow(inputs, index):
+
+                ceiled_coloring_index = tf.cast(tf.ceil(coloring_index), tf.int32)
+
+                if index == 0:
+
+                    feature_maps = self.dense_block(
+                        inputs=inputs,
+                        index=index,
+                        training=training,
+                        name="dense_block_{}".format(index)
+                    )
+
+                    return feature_maps
+
+                elif index == 1:
+
+                    feature_maps = grow(inputs, index - 1)
+
+                    images = self.color_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    feature_maps = self.deconv2d_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="deconv2d_block_{}".format(index)
+                    )
+
+                    return feature_maps, images
+
+                elif index == log2(self.min_resolution, self.max_resolution) + 1:
+
+                    feature_maps, images = grow(inputs, index - 1)
+
+                    old_images = ops.upsampling2d(
+                        inputs=images,
+                        factors=[2, 2],
+                        data_format=self.data_format
+                    )
+
+                    new_images = self.color_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    images = tf.case(
+                        pred_fn_pairs={
+                            tf.greater(index, ceiled_coloring_index): lambda: old_images,
+                            tf.less(index, ceiled_coloring_index): lambda: new_images
+                        },
+                        default=lambda: lerp(
+                            a=old_images,
+                            b=new_images,
+                            t=coloring_index - (index - 1)
+                        ),
+                        exclusive=True
+                    )
+
+                    return images
+
+                else:
+
+                    feature_maps, images = grow(inputs, index - 1)
+
+                    old_images = ops.upsampling2d(
+                        inputs=images,
+                        factors=[2, 2],
+                        data_format=self.data_format
+                    )
+
+                    new_images = self.color_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    images = tf.case(
+                        pred_fn_pairs={
+                            tf.greater(index, ceiled_coloring_index): lambda: old_images,
+                            tf.less(index, ceiled_coloring_index): lambda: new_images
+                        },
+                        default=lambda: lerp(
+                            a=old_images,
+                            b=new_images,
+                            t=coloring_index - (index - 1)
+                        ),
+                        exclusive=True
+                    )
+
+                    feature_maps = self.deconv2d_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="deconv2d_block_{}".format(index)
+                    )
+
+                    return feature_maps, images
+
+            return grow(inputs, log2(self.min_resolution, self.max_resolution) + 1)
+
+    def dense_block(self, inputs, index, training, name="dense_block", reuse=None):
+
+        with tf.variable_scope("dense_block", reuse=None):
+
+            resolution = self.min_resolution << index
+            filters = self.max_filters >> index
 
             inputs = ops.dense(
                 inputs=inputs,
-                units=np.prod(seed_size) * self.filters,
-                name="dense_0"
+                units=resolution * resolution * filters
             )
 
             inputs = ops.batch_normalization(
                 inputs=inputs,
                 data_format=self.data_format,
-                training=training,
-                name="batch_normalization_0"
+                training=training
             )
 
             inputs = tf.nn.relu(inputs)
 
             inputs = tf.reshape(
                 tensor=inputs,
-                shape=[-1] + seed_size + [self.filters]
+                shape=[-1, resolution, resolution, filters]
             )
 
             if self.data_format == "channels_first":
 
                 inputs = tf.transpose(inputs, [0, 3, 1, 2])
 
-            for i, deconv_param in enumerate(self.deconv_params, 1):
+            return inputs
 
-                inputs = ops.deconv2d(
-                    inputs=inputs,
-                    filters=deconv_param.filters,
-                    kernel_size=[4, 4],
-                    strides=[2, 2],
-                    data_format=self.data_format,
-                    name="deconv2d_{}".format(i)
-                )
+    def deconv2d_block(self, inputs, index, training, name="deconv2d_block", reuse=None):
 
-                inputs = ops.batch_normalization(
-                    inputs=inputs,
-                    data_format=self.data_format,
-                    training=training,
-                    name="batch_normalization_{}".format(i)
-                )
+        with tf.variable_scope(name, reuse=reuse):
 
-                inputs = tf.nn.relu(inputs)
+            inputs = ops.deconv2d(
+                inputs=inputs,
+                filters=self.max_filters >> index,
+                kernel_size=[4, 4],
+                strides=[2, 2],
+                data_format=self.data_format
+            )
+
+            inputs = ops.batch_normalization(
+                inputs=inputs,
+                data_format=self.data_format,
+                training=training
+            )
+
+            inputs = tf.nn.relu(inputs)
+
+            return inputs
+
+    def color_block(self, inputs, index, training, name="color_block", reuse=None):
+
+        with tf.variable_scope(name, reuse=reuse):
 
             inputs = ops.deconv2d(
                 inputs=inputs,
                 filters=3,
                 kernel_size=[3, 3],
                 strides=[1, 1],
-                data_format=self.data_format,
-                name="last_deconv2d_{}".format(len(self.deconv_params) + 1)
+                data_format=self.data_format
             )
 
             inputs = tf.nn.sigmoid(inputs)
@@ -85,63 +212,163 @@ class Generator(object):
 
 class Discriminator(object):
 
-    ConvParam = collections.namedtuple("ConvParam", ("filters"))
+    def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
-    def __init__(self, filters, conv_params, data_format):
-
-        self.filters = filters
-        self.conv_params = conv_params
+        self.min_resolution = min_resolution
+        self.max_resolution = max_resolution
+        self.max_filters = max_filters
         self.data_format = data_format
 
-    def __call__(self, inputs, training, name="discriminator", reuse=None):
+    def __call__(self, inputs, coloring_index, training, name="discriminator", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
-            inputs = ops.conv2d(
-                inputs=inputs,
-                filters=self.filters,
-                kernel_size=[3, 3],
-                strides=[1, 1],
-                data_format=self.data_format,
-                name="first_conv2d_{}".format(len(self.conv_params) + 1),
-                apply_spectral_normalization=True
-            )
+            def grow(feature_maps, images, index):
 
-            inputs = tf.nn.leaky_relu(inputs)
+                floored_coloring_index = tf.cast(tf.floor(coloring_index), tf.int32)
 
-            for i, conv_param in enumerate(self.conv_params, 1):
+                if index == 0:
 
-                inputs = ops.conv2d(
-                    inputs=inputs,
-                    filters=conv_param.filters,
-                    kernel_size=[4, 4],
-                    strides=[2, 2],
-                    data_format=self.data_format,
-                    name="conv2d_{}_1".format(len(self.conv_params) + 1 - i),
-                    apply_spectral_normalization=True
-                )
+                    logits = self.dense_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="dense_block_{}".format(index)
+                    )
 
-                inputs = tf.nn.leaky_relu(inputs)
+                    return logits
 
-                inputs = ops.conv2d(
-                    inputs=inputs,
-                    filters=conv_param.filters,
-                    kernel_size=[3, 3],
-                    strides=[1, 1],
-                    data_format=self.data_format,
-                    name="conv2d_{}_0".format(len(self.conv_params) + 1 - i),
-                    apply_spectral_normalization=True
-                )
+                elif index == 1:
 
-                inputs = tf.nn.leaky_relu(inputs)
+                    old_feature_maps = self.color_block(
+                        inputs=images,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    new_feature_maps = self.conv2d_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="conv2d_block_{}".format(index)
+                    )
+
+                    feature_maps = tf.case(
+                        pred_fn_pairs={
+                            tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
+                            tf.less(index, floored_coloring_index): lambda: new_feature_maps
+                        },
+                        default=lambda: lerp(
+                            a=old_feature_maps,
+                            b=new_feature_maps,
+                            t=coloring_index - index
+                        ),
+                        exclusive=True
+                    )
+
+                    return grow(feature_maps, None, index - 1)
+
+                elif index == log2(self.min_resolution, self.max_resolution) + 1:
+
+                    feature_maps = self.color_block(
+                        inputs=images,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    images = ops.downsampling2d(
+                        inputs=images,
+                        factors=[2, 2],
+                        data_format=self.data_format
+                    )
+
+                    return grow(feature_maps, images, index - 1)
+
+                else:
+
+                    old_feature_maps = self.color_block(
+                        inputs=images,
+                        index=index,
+                        training=training,
+                        name="color_block_{}".format(index)
+                    )
+
+                    new_feature_maps = self.conv2d_block(
+                        inputs=feature_maps,
+                        index=index,
+                        training=training,
+                        name="conv2d_block_{}".format(index)
+                    )
+
+                    feature_maps = tf.case(
+                        pred_fn_pairs={
+                            tf.greater(index, floored_coloring_index): lambda: old_feature_maps,
+                            tf.less(index, floored_coloring_index): lambda: new_feature_maps
+                        },
+                        default=lambda: lerp(
+                            a=old_feature_maps,
+                            b=new_feature_maps,
+                            t=coloring_index - index
+                        ),
+                        exclusive=True
+                    )
+
+                    images = ops.downsampling2d(
+                        inputs=images,
+                        factors=[2, 2],
+                        data_format=self.data_format
+                    )
+
+                    return grow(feature_maps, images, index - 1)
+
+            return grow(None, inputs, log2(self.min_resolution, self.max_resolution) + 1)
+
+    def dense_block(self, inputs, index, training, name="dense_block", reuse=None):
+
+        with tf.variable_scope(name, reuse=reuse):
 
             inputs = tf.layers.flatten(inputs)
 
             inputs = ops.dense(
                 inputs=inputs,
                 units=1,
-                name="dense_0",
                 apply_spectral_normalization=True
             )
+
+            return inputs
+
+    def conv2d_block(self, inputs, index, training, name="conv2d_block", reuse=None):
+
+        with tf.variable_scope(name, reuse=reuse):
+
+            inputs = ops.conv2d(
+                inputs=inputs,
+                filters=self.max_filters >> (index - 1),
+                kernel_size=[4, 4],
+                strides=[2, 2],
+                data_format=self.data_format,
+                apply_spectral_normalization=True
+            )
+
+            inputs = tf.nn.leaky_relu(inputs)
+
+            return inputs
+
+    def color_block(self, inputs, index, training, name="color_block", reuse=None):
+
+        with tf.variable_scope(name, reuse=reuse):
+
+            inputs = ops.conv2d(
+                inputs=inputs,
+                filters=self.max_filters >> (index - 1),
+                kernel_size=[3, 3],
+                strides=[1, 1],
+                data_format=self.data_format,
+                apply_spectral_normalization=True
+            )
+
+            inputs = tf.nn.leaky_relu(inputs)
 
             return inputs
