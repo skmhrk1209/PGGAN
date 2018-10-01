@@ -262,8 +262,7 @@ class Discriminator(object):
                         logits = self.dense_block(
                             inputs=feature_maps,
                             index=index,
-                            training=training,
-                            name="dense_block_{}".format(index)
+                            training=training
                         )
 
                         return logits
@@ -273,15 +272,13 @@ class Discriminator(object):
                         old_feature_maps = self.color_block(
                             inputs=images,
                             index=index,
-                            training=training,
-                            name="color_block_{}".format(index)
+                            training=training
                         )
 
                         new_feature_maps = self.conv2d_block(
                             inputs=feature_maps,
                             index=index,
-                            training=training,
-                            name="conv2d_block_{}".format(index)
+                            training=training
                         )
 
                         feature_maps = tf.case(
@@ -304,8 +301,7 @@ class Discriminator(object):
                         feature_maps = self.color_block(
                             inputs=images,
                             index=index,
-                            training=training,
-                            name="color_block_{}".format(index)
+                            training=training
                         )
 
                         images = ops.downsampling2d(
@@ -321,15 +317,13 @@ class Discriminator(object):
                         old_feature_maps = self.color_block(
                             inputs=images,
                             index=index,
-                            training=training,
-                            name="color_block_{}".format(index)
+                            training=training
                         )
 
                         new_feature_maps = self.conv2d_block(
                             inputs=feature_maps,
                             index=index,
-                            training=training,
-                            name="conv2d_block_{}".format(index)
+                            training=training
                         )
 
                         feature_maps = tf.case(
