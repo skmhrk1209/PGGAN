@@ -23,7 +23,9 @@ args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-
+#=============================================================#
+# just for convenience
+#=============================================================#
 class AttrDict(dict):
 
     def __getattr__(self, name): return self[name]
@@ -32,7 +34,9 @@ class AttrDict(dict):
 
     def __delattr__(self, name): del self[name]
 
-
+#=============================================================#
+# model difinition
+#=============================================================#
 gan_model = gan.Model(
     dataset=celeba.Dataset(
         image_size=[128, 128],
@@ -66,6 +70,9 @@ gan_model = gan.Model(
     name=args.model_dir
 )
 
+#=============================================================#
+#  gpu options
+#=============================================================#
 config = tf.ConfigProto(
     gpu_options=tf.GPUOptions(
         visible_device_list=args.gpu,
@@ -75,6 +82,9 @@ config = tf.ConfigProto(
     allow_soft_placement=True
 )
 
+#=============================================================#
+#  training step
+#=============================================================#
 with tf.Session(config=config) as session:
 
     if args.train:
