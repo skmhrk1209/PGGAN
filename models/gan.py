@@ -236,8 +236,8 @@ class Model(object):
             # setup summaries of important tensor
             #=============================================================#
             self.summary = tf.summary.merge([
-                tf.summary.image("reals", self.reals),
-                tf.summary.image("fakes", self.fakes),
+                tf.summary.image("reals", self.reals, max_outputs=10),
+                tf.summary.image("fakes", self.fakes, max_outputs=10),
                 tf.summary.scalar("generator_loss", self.generator_loss),
                 tf.summary.scalar("discriminator_loss", self.discriminator_loss),
                 tf.summary.scalar("gradient_penalty", self.gradient_penalty),
