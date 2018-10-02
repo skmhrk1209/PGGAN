@@ -352,8 +352,8 @@ class Model(object):
 
                     fakes = session.run(self.fakes, feed_dict=feed_dict)
                     images = np.concatenate([reals, fakes], axis=2)
-                    images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
                     images *= 255.0
+                    images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
 
                     for j, image in enumerate(images):
 
