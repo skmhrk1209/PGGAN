@@ -129,7 +129,7 @@ class Model(object):
                 )
             )
 
-            # add WGAN-GP gradient penalty to discriminator loss
+            # add gradient penalty to discriminator loss
             # slopes throws NaN (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
             # so add epsilon inside sqrt()
             self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
@@ -143,10 +143,18 @@ class Model(object):
             )
 
             self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
-            self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
 
+            # one-centered gradient penalty (WGAN-GP)
+            self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
             self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
             self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
+
+            # zero-centered gradient penalty (https://openreview.net/pdf?id=ByxPYjC5KQ)
+            '''
+            self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
+            self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 0.0))
+            self.discriminator_loss += self.gradient_penalty * self.hyper_param.gradient_coefficient
+            '''
 
             self.generator_variables = tf.get_collection(
                 key=tf.GraphKeys.TRAINABLE_VARIABLES,
