@@ -293,7 +293,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
         return inputs
 
 
-def unpooling2d(inputs, pool_size, data_format):
+def unpooling2d(inputs, pool_size, data_format, dynamic=False):
     ''' upsampling operation with zero padding
 
         [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
@@ -308,8 +308,7 @@ def unpooling2d(inputs, pool_size, data_format):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    # shape = inputs.shape
-    shape = tf.shape(inputs)
+    shape = tf.shape(inputs) if dynamic else inputs.shape
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * shape[3], 1])
 
@@ -329,7 +328,7 @@ def unpooling2d(inputs, pool_size, data_format):
     return inputs
 
 
-def upsampling2d(inputs, factors, data_format):
+def upsampling2d(inputs, factors, data_format, dynamic=False):
     ''' upsampling operation
 
         this implementation is from nvidia
@@ -339,8 +338,7 @@ def upsampling2d(inputs, factors, data_format):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    # shape = inputs.shape
-    shape = tf.shape(inputs)
+    shape = tf.shape(inputs) if dynamic else inputs.shape
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], 1, shape[3], 1])
 
