@@ -1,3 +1,20 @@
+#=================================================================================================#
+# Implementation of Progressive Growing GAN
+#
+# 2018/10/01 Hiroki Sakuma
+# (https://github.com/skmhrk1209/PGGAN)
+#
+# original paper
+# [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
+# (https://arxiv.org/pdf/1710.10196.pdf)
+#
+# tune up as described by
+# [Are GANs Created Equal? A Large-Scale Study]
+# (https://arxiv.org/pdf/1711.10337.pdf)
+# [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
+# (https://arxiv.org/pdf/1807.04720.pdf)
+#=================================================================================================#
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,9 +41,6 @@ args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-#=============================================================#
-# model difinition
-#=============================================================#
 gan_model = gan.Model(
     dataset=celeba.Dataset(
         image_size=[128, 128],
@@ -60,9 +74,6 @@ gan_model = gan.Model(
     name=args.model_dir
 )
 
-#=============================================================#
-#  gpu options
-#=============================================================#
 config = tf.ConfigProto(
     gpu_options=tf.GPUOptions(
         visible_device_list=args.gpu,
@@ -72,9 +83,6 @@ config = tf.ConfigProto(
     allow_soft_placement=True
 )
 
-#=============================================================#
-#  training step
-#=============================================================#
 with tf.Session(config=config) as session:
 
     if args.train:

@@ -13,21 +13,12 @@ import cv2
 
 class Model(object):
 
-    #=============================================================#
-    # enum for loss function type
-    #=============================================================#
     class LossFunction:
         NS_GAN, WGAN = range(2)
 
-    #=============================================================#
-    # enum for gradient penalty type
-    #=============================================================#
     class GradientPenalty:
         ZERO_CENTERED, ONE_CENTERED = range(2)
 
-    #=============================================================#
-    # model difinition
-    #=============================================================#
     def __init__(self, dataset, generator, discriminator, loss_function,
                  gradient_penalty, hyper_parameters, name="gan", reuse=None):
 
@@ -39,14 +30,8 @@ class Model(object):
             self.discriminator = discriminator
             self.hyper_parameters = hyper_parameters
 
-            self.batch_size = tf.placeholder(
-                dtype=tf.int32,
-                shape=[]
-            )
-            self.training = tf.placeholder(
-                dtype=tf.bool,
-                shape=[]
-            )
+            self.batch_size = tf.placeholder(dtype=tf.int32, shape=[])
+            self.training = tf.placeholder(dtype=tf.bool, shape=[])
 
             self.generator_global_step = tf.get_variable(
                 name="generator_global_step",
@@ -63,29 +48,15 @@ class Model(object):
                 trainable=False
             )
 
-            #=============================================================#
-            # "coloring_index" for progressive growing architecture
-            #=============================================================#
             self.coloring_index = self.hyper_parameters.coloring_index_fn(
                 global_step=tf.cast(self.discriminator_global_step, tf.float32)
             )
 
             self.next_reals = self.dataset.get_next()
+            self.next_latents = tf.random_normal(shape=[self.batch_size, self.hyper_parameters.latent_size])
 
-            self.next_latents = tf.random_normal(
-                shape=[self.batch_size, self.hyper_parameters.latent_size],
-                dtype=tf.float32
-            )
-
-            self.reals = tf.placeholder(
-                dtype=tf.float32,
-                shape=self.next_reals.shape
-            )
-
-            self.latents = tf.placeholder(
-                dtype=tf.float32,
-                shape=[None, self.hyper_parameters.latent_size]
-            )
+            self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
+            self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_parameters.latent_size])
 
             self.fakes = generator(
                 inputs=self.latents,
@@ -108,9 +79,11 @@ class Model(object):
                 reuse=True
             )
 
-            #=============================================================#
-            # NS-GAN loss function
-            #=============================================================#
+            #========================================================================#
+            # two types of loss function
+            # 1. NS-GAN loss function (https://arxiv.org/pdf/1406.2661.pdf)
+            # 2. WGAN loss function (https://arxiv.org/pdf/1701.07875.pdf)
+            #========================================================================#
             if loss_function == Model.LossFunction.NS_GAN:
 
                 self.generator_loss = tf.reduce_mean(
@@ -133,9 +106,6 @@ class Model(object):
                     )
                 )
 
-            #=============================================================#
-            # WGAN loss function
-            #=============================================================#
             elif loss_function == Model.LossFunction.WGAN:
 
                 self.generator_loss = -tf.reduce_mean(self.fake_logits)
@@ -146,12 +116,10 @@ class Model(object):
             else:
                 raise ValueError("Invalid loss function")
 
-            #=============================================================#
+            #========================================================================#
             # interpolation for gradient penalty
-            # to avoid NaN exception, add epsilon inside sqrt()
-            # (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
-            #=============================================================#
-            self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1], dtype=tf.float32)
+            #========================================================================#
+            self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1])
             self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
             self.interpolate_logits = discriminator(
                 inputs=self.interpolates,
@@ -160,21 +128,20 @@ class Model(object):
                 name="discriminator",
                 reuse=True
             )
-
+            #========================================================================#
+            # two types of gradient penalty
+            # 1. zero-centered gradient penalty (https://openreview.net/pdf?id=ByxPYjC5KQ)
+            # 2. one-centered gradient penalty (https://arxiv.org/pdf/1704.00028.pdf)
+            # to avoid NaN exception, add epsilon inside sqrt()
+            # (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
+            #========================================================================#
             self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
             self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
 
-            #=============================================================#
-            # zero-centered gradient penalty
-            # (https://openreview.net/pdf?id=ByxPYjC5KQ)
-            #=============================================================#
             if gradient_penalty == Model.GradientPenalty.ZERO_CENTERED:
 
                 self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 0.0))
 
-            #=============================================================#
-            # one-centered gradient penalty (WGAN-GP)
-            #=============================================================#
             elif gradient_penalty == Model.GradientPenalty.ONE_CENTERED:
 
                 self.gradient_penalty = tf.reduce_mean(tf.square(self.slopes - 1.0))
@@ -193,9 +160,6 @@ class Model(object):
                 scope="{}/discriminator".format(self.name)
             )
 
-            #=============================================================#
-            # tune hyper parameter learning rate, beta1, beta2
-            #=============================================================#
             self.generator_optimizer = tf.train.AdamOptimizer(
                 learning_rate=self.hyper_parameters.learning_rate,
                 beta1=self.hyper_parameters.beta1,
@@ -207,12 +171,12 @@ class Model(object):
                 beta2=self.hyper_parameters.beta2
             )
 
-            #=============================================================#
+            #========================================================================#
             # to update moving_mean and moving_variance
             # for batch normalization when trainig,
-            # run update operation before run train operation
-            # this update operation is placed in tf.GraphKeys.UPDATE_OPS
-            #=============================================================#
+            # run update operation before train operation
+            # update operation is placed in tf.GraphKeys.UPDATE_OPS
+            #========================================================================#
             with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
 
                 self.generator_train_op = self.generator_optimizer.minimize(
@@ -227,14 +191,8 @@ class Model(object):
                     global_step=self.discriminator_global_step
                 )
 
-            #=============================================================#
-            # save variables already defined to checkpoint
-            #=============================================================#
             self.saver = tf.train.Saver()
 
-            #=============================================================#
-            # setup summaries of important tensor
-            #=============================================================#
             self.summary = tf.summary.merge([
                 tf.summary.image("reals", self.reals, max_outputs=10),
                 tf.summary.image("fakes", self.fakes, max_outputs=10),
@@ -243,10 +201,6 @@ class Model(object):
                 tf.summary.scalar("gradient_penalty", self.gradient_penalty),
             ])
 
-    #=============================================================#
-    # restore variables from checkpoint
-    # or initialize global variables
-    #=============================================================#
     def initialize(self):
 
         session = tf.get_default_session()
@@ -262,9 +216,6 @@ class Model(object):
             session.run(tf.variables_initializer(global_variables))
             print("global variables in {} initialized".format(self.name))
 
-    #=============================================================#
-    # training step
-    #=============================================================#
     def train(self, filenames, num_epochs, batch_size, buffer_size):
 
         session = tf.get_default_session()
@@ -274,9 +225,6 @@ class Model(object):
 
         start = time.time()
 
-        #=============================================================#
-        # initialize dataset iterator
-        #=============================================================#
         self.dataset.initialize(
             filenames=filenames,
             num_epochs=num_epochs,
