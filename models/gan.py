@@ -26,8 +26,6 @@ class Model(object):
 
     def __init__(self, dataset, generator, discriminator, hyper_param, name="gan", reuse=None):
 
-        # if train this model in PGGAN style
-        # set reuse=tf.AUTO_REUSE
         with tf.variable_scope(name, reuse=reuse):
 
             self.name = name
@@ -38,13 +36,11 @@ class Model(object):
 
             self.batch_size = tf.placeholder(
                 dtype=tf.int32,
-                shape=[],
-                name="batch_size"
+                shape=[]
             )
             self.training = tf.placeholder(
                 dtype=tf.bool,
-                shape=[],
-                name="training"
+                shape=[]
             )
 
             # it's ok generator global step and discriminator global step isn't same
@@ -82,14 +78,12 @@ class Model(object):
 
             self.reals = tf.placeholder(
                 dtype=tf.float32,
-                shape=self.next_reals.shape,
-                name="reals"
+                shape=self.next_reals.shape
             )
 
             self.latents = tf.placeholder(
                 dtype=tf.float32,
-                shape=[None, self.hyper_param.latent_size],
-                name="latents"
+                shape=[None, self.hyper_param.latent_size]
             )
 
             self.fakes = generator(
@@ -221,20 +215,6 @@ class Model(object):
             session.run(tf.variables_initializer(global_variables))
             print("global variables in {} initialized".format(self.name))
 
-    # call this when train model using pre-trained model
-    # in this case, initialize only uninitialized variables
-    def reinitialize(self):
-
-        session = tf.get_default_session()
-
-        uninitialized_variables = [
-            variable for variable in tf.global_variables(self.name)
-            if not session.run(tf.is_variable_initialized(variable))
-        ]
-
-        session.run(tf.variables_initializer(uninitialized_variables))
-        print("uninitialized variables in {} initialized".format(self.name))
-
     def train(self, filenames, num_epochs, batch_size, buffer_size):
 
         session = tf.get_default_session()
@@ -251,32 +231,7 @@ class Model(object):
             batch_size=batch_size,
             buffer_size=buffer_size
         )
-        '''
-        ### [CAUTION] ###
-        # variables in pre-trained model depends placeholders that doesn't exist in this instance.
-        # so, search those placeholders in graph, and feed values to them.
-        latents_placeholder_names = [
-            "{}:0".format(operation.name)
-            for operation in tf.get_default_graph().get_operations()
-            if "latents" in operation.name
-        ]
 
-        training_placeholder_names = [
-            "{}:0".format(operation.name)
-            for operation in tf.get_default_graph().get_operations()
-            if "training" in operation.name
-        ]
-
-        latents_placeholders = [
-            tf.get_default_graph().get_tensor_by_name(latents_placeholder_name)
-            for latents_placeholder_name in latents_placeholder_names
-        ]
-
-        training_placeholders = [
-            tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
-            for training_placeholder_name in training_placeholder_names
-        ]
-        '''
         for i in itertools.count():
 
             feed_dict = {self.batch_size: batch_size}
@@ -295,18 +250,11 @@ class Model(object):
                 if reals.shape[0] != batch_size:
                     break
 
-            feed_dict.update({self.reals: reals})
-            '''
             feed_dict.update({
-                latents_placeholder: latents
-                for latents_placeholder in latents_placeholders
+                self.reals: reals,
+                self.latents: latents
             })
 
-            feed_dict.update({
-                training_placeholder: True
-                for training_placeholder in training_placeholders
-            })
-            '''
             session.run(
                 [self.generator_train_op, self.discriminator_train_op],
                 feed_dict=feed_dict
