@@ -357,4 +357,4 @@ class Model(object):
                     for j, image in enumerate(images):
 
                         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        cv2.imwrite("image_{}_{}.png".format(i, j), image)
+                        cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
