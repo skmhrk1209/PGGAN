@@ -7,6 +7,7 @@ import argparse
 from models import gan
 from archs import dcgan, resnet
 from data import celeba
+from utils import attr_dict
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
@@ -22,17 +23,6 @@ parser.add_argument('--gpu', type=str, default="0", help="gpu id")
 args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
-
-#=============================================================#
-# just for convenience
-#=============================================================#
-class AttrDict(dict):
-
-    def __getattr__(self, name): return self[name]
-
-    def __setattr__(self, name, value): self[name] = value
-
-    def __delattr__(self, name): del self[name]
 
 #=============================================================#
 # model difinition
@@ -56,9 +46,9 @@ gan_model = gan.Model(
     ),
     loss_function=gan.Model.LossFunction.NS_GAN,
     gradient_penalty=gan.Model.GradientPenalty.ZERO_CENTERED,
-    hyper_parameters=AttrDict(
+    hyper_parameters=attr_dict.AttrDict(
         latent_size=128,
-        gradient_coefficient=1.0,
+        gradient_coefficient=10.0,
         learning_rate=0.0002,
         beta1=0.5,
         beta2=0.999,
