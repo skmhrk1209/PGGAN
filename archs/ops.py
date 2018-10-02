@@ -190,15 +190,10 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
             )
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
-        '''
+
         output_shape = tf.shape(inputs) * strides
         output_shape = (tf.concat([output_shape[0:1], [filters], output_shape[2:4]], axis=0) if data_format_abbr == "NCHW" else
                         tf.concat([output_shape[0:1], output_shape[1:3], [filters]], axis=0))
-        '''
-        input_shape = inputs.shape.as_list()
-        print(input_shape)
-        output_shape = ([-1, filters, input_shape[2] * strides[2], input_shape[3] * strides[3]] if data_format_abbr == "NCHW" else
-                        [-1, input_shape[1] * strides[1], input_shape[2] * strides[2], filters])
 
         inputs = tf.nn.conv2d_transpose(
             value=inputs,
@@ -298,7 +293,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
         return inputs
 
 
-def unpooling2d(inputs, pool_size, data_format):
+def unpooling2d(inputs, pool_size, data_format, dynamic=False):
     ''' upsampling operation with zero padding
 
         [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
@@ -313,7 +308,7 @@ def unpooling2d(inputs, pool_size, data_format):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    shape = inputs.shape.as_list()
+    shape = tf.shape(inputs) if dynamic else inputs.shape.as_list()
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * shape[3], 1])
 
@@ -333,7 +328,7 @@ def unpooling2d(inputs, pool_size, data_format):
     return inputs
 
 
-def upsampling2d(inputs, factors, data_format):
+def upsampling2d(inputs, factors, data_format, dynamic=False):
     ''' upsampling operation
 
         this implementation is from nvidia
@@ -343,7 +338,7 @@ def upsampling2d(inputs, factors, data_format):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    shape = inputs.shape.as_list()
+    shape = tf.shape(inputs) if dynamic else inputs.shape.as_list()
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], 1, shape[3], 1])
 

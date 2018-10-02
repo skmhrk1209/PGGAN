@@ -89,7 +89,8 @@ class Generator(object):
                         old_images = ops.upsampling2d(
                             inputs=images,
                             factors=[2, 2],
-                            data_format=self.data_format
+                            data_format=self.data_format,
+                            dynamic=True
                         )
 
                         new_images = self.color_block(
@@ -120,7 +121,8 @@ class Generator(object):
                         old_images = ops.upsampling2d(
                             inputs=images,
                             factors=[2, 2],
-                            data_format=self.data_format
+                            data_format=self.data_format,
+                            dynamic=True
                         )
 
                         new_images = self.color_block(
