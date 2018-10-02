@@ -299,7 +299,7 @@ def unpooling2d(inputs, pool_size, data_format):
         [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
         (https://arxiv.org/pdf/1807.04720.pdf)
 
-        authors used unpool function from github
+        authors used "unpooling" function from github
         (https://github.com/tensorflow/tensorflow/issues/2169)
 
         my implementation is better
