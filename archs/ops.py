@@ -308,6 +308,8 @@ def unpooling2d(inputs, pool_size, data_format, dynamic=False):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
+    # I don't know why dynamic reshape throws error in ResNet architecture,
+    # and static reshape throws error in DCGAN architecture
     shape = tf.shape(inputs) if dynamic else inputs.shape
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * shape[3], 1])
@@ -338,6 +340,8 @@ def upsampling2d(inputs, factors, data_format, dynamic=False):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
+    # I don't know why dynamic reshape throws error in ResNet architecture,
+    # and static reshape throws error in DCGAN architecture
     shape = tf.shape(inputs) if dynamic else inputs.shape
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], 1, shape[3], 1])
