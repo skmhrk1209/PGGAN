@@ -12,7 +12,7 @@ def spectral_normalization(input, name="spectral_normalization", reuse=None):
         [Spectral Normalization for Generative Adversarial Networks]
         (https://arxiv.org/pdf/1802.05957.pdf)
 
-        this implementation is from google 
+        this implementation is from google
         (https://github.com/google/compare_gan/blob/master/compare_gan/src/gans/ops.py)
     '''
 
@@ -190,10 +190,14 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
             )
 
         strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
-
+        '''
         output_shape = tf.shape(inputs) * strides
         output_shape = (tf.concat([output_shape[0:1], [filters], output_shape[2:4]], axis=0) if data_format_abbr == "NCHW" else
                         tf.concat([output_shape[0:1], output_shape[1:3], [filters]], axis=0))
+        '''
+        input_shape = inputs.shape.as_list()
+        output_shape = ([-1, filters, input_shape[2] * strides[2], input_shape[3] * strides[3]] if data_format_abbr == "NCHW" else
+                        [-1, input_shape[1] * strides[1], input_shape[2] * strides[2], filters])
 
         inputs = tf.nn.conv2d_transpose(
             value=inputs,
@@ -225,7 +229,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
                    name="residual_block", reuse=None, apply_spectral_normalization=False):
     ''' preactivation building residual block for spectral normalization
 
-        normalization then activation then convolution as described by: 
+        normalization then activation then convolution as described by:
         [Identity Mappings in Deep Residual Networks]
         (https://arxiv.org/pdf/1603.05027.pdf)
     '''
@@ -293,7 +297,7 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
         return inputs
 
 
-def unpooling2d(inputs, pool_size, data_format, dynamic=False):
+def unpooling2d(inputs, pool_size, data_format):
     ''' upsampling operation with zero padding
 
         [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
@@ -308,9 +312,7 @@ def unpooling2d(inputs, pool_size, data_format, dynamic=False):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    # I don't know why dynamic reshape throws error in ResNet architecture,
-    # and static reshape throws error in DCGAN architecture
-    shape = tf.shape(inputs) if dynamic else inputs.shape
+    shape = inputs.shape.as_list()
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2] * shape[3], 1])
 
@@ -330,7 +332,7 @@ def unpooling2d(inputs, pool_size, data_format, dynamic=False):
     return inputs
 
 
-def upsampling2d(inputs, factors, data_format, dynamic=False):
+def upsampling2d(inputs, factors, data_format):
     ''' upsampling operation
 
         this implementation is from nvidia
@@ -340,9 +342,7 @@ def upsampling2d(inputs, factors, data_format, dynamic=False):
     if data_format == "channels_last":
         inputs = tf.transpose(inputs, perm=[0, 3, 1, 2])
 
-    # I don't know why dynamic reshape throws error in ResNet architecture,
-    # and static reshape throws error in DCGAN architecture
-    shape = tf.shape(inputs) if dynamic else inputs.shape
+    shape = inputs.shape.as_list()
 
     inputs = tf.reshape(inputs, shape=[-1, shape[1], shape[2], 1, shape[3], 1])
 

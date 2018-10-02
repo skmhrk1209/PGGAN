@@ -90,7 +90,7 @@ class Generator(object):
                             inputs=images,
                             factors=[2, 2],
                             data_format=self.data_format,
-                            dynamic=True
+                            dynamic=False
                         )
 
                         new_images = self.color_block(
@@ -122,7 +122,7 @@ class Generator(object):
                             inputs=images,
                             factors=[2, 2],
                             data_format=self.data_format,
-                            dynamic=True
+                            dynamic=False
                         )
 
                         new_images = self.color_block(
