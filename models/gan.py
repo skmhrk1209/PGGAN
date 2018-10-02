@@ -281,7 +281,7 @@ class Model(object):
                 ))
 
                 coloring_index = session.run(self.coloring_index)
-                print("coloring_index: {}".format(coloring_index))
+                print("coloring_index: {:2f}".format(coloring_index))
 
                 summary = session.run(self.summary, feed_dict=feed_dict)
                 writer.add_summary(summary, global_step=generator_global_step)
