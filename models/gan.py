@@ -251,7 +251,7 @@ class Model(object):
             batch_size=batch_size,
             buffer_size=buffer_size
         )
-
+        '''
         ### [CAUTION] ###
         # variables in pre-trained model depends placeholders that doesn't exist in this instance.
         # so, search those placeholders in graph, and feed values to them.
@@ -276,7 +276,7 @@ class Model(object):
             tf.get_default_graph().get_tensor_by_name(training_placeholder_name)
             for training_placeholder_name in training_placeholder_names
         ]
-
+        '''
         for i in itertools.count():
 
             feed_dict = {self.batch_size: batch_size}
@@ -296,7 +296,7 @@ class Model(object):
                     break
 
             feed_dict.update({self.reals: reals})
-
+            '''
             feed_dict.update({
                 latents_placeholder: latents
                 for latents_placeholder in latents_placeholders
@@ -306,7 +306,7 @@ class Model(object):
                 training_placeholder: True
                 for training_placeholder in training_placeholders
             })
-
+            '''
             session.run(
                 [self.generator_train_op, self.discriminator_train_op],
                 feed_dict=feed_dict
