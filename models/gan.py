@@ -338,16 +338,7 @@ class Model(object):
                 summary = session.run(self.summary, feed_dict=feed_dict)
                 writer.add_summary(summary, global_step=generator_global_step)
 
-                fakes = session.run(self.fakes, feed_dict=feed_dict)
-                images = np.concatenate([reals, fakes], axis=2)
-                images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
-
-                for j, image in enumerate(images):
-
-                    cv2.imshow("image", image)
-                    cv2.waitKey(100)
-
-                if i % 1000 == 0:
+                if i % 100000 == 0:
 
                     checkpoint = self.saver.save(
                         sess=session,
@@ -358,3 +349,12 @@ class Model(object):
                     stop = time.time()
                     print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
                     start = time.time()
+
+                    fakes = session.run(self.fakes, feed_dict=feed_dict)
+                    images = np.concatenate([reals, fakes], axis=2)
+                    images = [cv2.cvtColor(image, cv2.COLOR_RGB2BGR) for image in images]
+                    images *= 255.0
+
+                    for j, image in enumerate(images):
+
+                        cv2.imwrite("image_{}_{}.png".format(i, j), image)

@@ -11,7 +11,7 @@ from data import celeba
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
 parser.add_argument('--filenames', type=str, nargs="+", default=["train.tfrecord"], help="tfrecord filenames")
-parser.add_argument("--num_epochs", type=int, default=10, help="number of training epochs")
+parser.add_argument("--num_epochs", type=int, default=100, help="number of training epochs")
 parser.add_argument("--batch_size", type=int, default=10, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
 parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"],
