@@ -6,6 +6,34 @@
 # Preparing datasets for training
 > python data/make_dataset.py --filename train.tfrecord  --directory path/to/celeba  
 
+> python main.py --help
+usage: main.py [-h] [--model_dir MODEL_DIR]
+               [--filenames FILENAMES [FILENAMES ...]]
+               [--num_epochs NUM_EPOCHS] [--batch_size BATCH_SIZE]
+               [--buffer_size BUFFER_SIZE]
+               [--data_format {channels_first,channels_last}] [--train]
+               [--generate] [--num_images NUM_IMAGES] [--gpu GPU]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model_dir MODEL_DIR
+                        model directory
+  --filenames FILENAMES [FILENAMES ...]
+                        tfrecord filenames
+  --num_epochs NUM_EPOCHS
+                        number of training epochs
+  --batch_size BATCH_SIZE
+                        batch size
+  --buffer_size BUFFER_SIZE
+                        buffer size to shuffle dataset
+  --data_format {channels_first,channels_last}
+                        data_format
+  --train               training mode
+  --generate            generation mode
+  --num_images NUM_IMAGES
+                        num of images to generate
+  --gpu GPU             gpu id  
+
 # Training networks
 > python main.py --train --filenames train.tfrecord  
 
