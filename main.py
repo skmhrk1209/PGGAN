@@ -24,7 +24,7 @@ import argparse
 from models import gan
 from archs import dcgan, resnet
 from data import celeba
-from utils import attr_dict
+from utils.attr_dict import AttrDict
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
@@ -60,7 +60,7 @@ gan_model = gan.Model(
     ),
     loss_function=gan.Model.LossFunction.NS_GAN,
     gradient_penalty=gan.Model.GradientPenalty.ZERO_CENTERED,
-    hyper_parameters=attr_dict.AttrDict(
+    hyper_parameters=AttrDict(
         latent_size=128,
         gradient_coefficient=10.0,
         learning_rate=0.0002,
