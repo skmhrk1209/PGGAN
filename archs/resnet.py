@@ -1,3 +1,14 @@
+#=================================================================================================#
+# Progressive Growing GAN Architecture
+#
+# [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
+# (https://arxiv.org/pdf/1710.10196.pdf)
+#
+# based on ResNet
+# [Deep Residual Learning for Image Recognition]
+# (https://arxiv.org/pdf/1512.03385.pdf)
+#=================================================================================================#
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -20,15 +31,6 @@ def log2(m, n):
 
 
 class Generator(object):
-    '''
-    Progressive Growing GAN Architecture
-    [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
-    (https://arxiv.org/pdf/1710.10196.pdf)
-
-    based on ResNet
-    [Deep Residual Learning for Image Recognition]
-    (https://arxiv.org/pdf/1512.03385.pdf)
-    '''
 
     def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
@@ -41,14 +43,14 @@ class Generator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
+            #========================================================================#
+            # very complicated but efficient architecture
+            # each layer has two output paths: feature_maps and images
+            # whether which path is evaluated at runtime
+            # depends on variable "coloring_index"
+            # but, all possible pathes must be constructed at compile time
+            #========================================================================#
             def grow(inputs, index):
-                '''
-                    very complicated but efficient architecture
-                    each layer has two output paths: feature_maps and images
-                    whether which path is evaluated at runtime
-                    depends on variable "coloring_index"
-                    but, all possible pathes must be constructed at compile time
-                '''
 
                 with tf.variable_scope("layer_{}".format(index)):
 
@@ -226,15 +228,6 @@ class Generator(object):
 
 
 class Discriminator(object):
-    '''
-    Progressive Growing GAN Architecture
-    [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
-    (https://arxiv.org/pdf/1710.10196.pdf)
-
-    based on SNDCGAN
-    [Spectral Normalization for Generative Adversarial Networks]
-    (https://arxiv.org/pdf/1802.05957.pdf)
-    '''
 
     def __init__(self, min_resolution, max_resolution, max_filters, data_format):
 
@@ -247,14 +240,14 @@ class Discriminator(object):
 
         with tf.variable_scope(name, reuse=reuse):
 
+            #========================================================================#
+            # very complicated but efficient architecture
+            # each layer has two output paths: feature_maps and images
+            # whether which path is evaluated at runtime
+            # depends on variable "coloring_index"
+            # but, all possible pathes must be constructed at compile time
+            #========================================================================#
             def grow(feature_maps, images, index):
-                '''
-                    very complicated but efficient architecture
-                    each layer has two output paths: feature_maps and images
-                    whether which path is evaluated at runtime
-                    depends on variable "coloring_index"
-                    but, all possible pathes must be constructed at compile time
-                '''
 
                 with tf.variable_scope("layer_{}".format(index)):
 
