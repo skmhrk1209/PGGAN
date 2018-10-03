@@ -7,7 +7,7 @@
 > python data/make_dataset.py --filename train.tfrecord  --directory path/to/celeba  
 
 # Training networks
-> python main.py --train --filenames train.tfrecord --num_epochs 100 --batch_size 100  
+> python main.py --train --filenames train.tfrecord  
 
 # Generate images
 > python main.py --generate --num_images 100  
