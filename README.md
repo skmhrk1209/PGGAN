@@ -10,7 +10,7 @@
 > python main.py --train --filenames train.tfrecord --num_epochs 100 --batch_size 100  
 
 # Generate images
-> python main.py --generate --num_images 100
+> python main.py --generate --num_images 100  
 ```
 
 ### Generated images (128×128, cherry picked)
