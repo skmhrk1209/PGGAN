@@ -5,13 +5,15 @@
 ```
 # Preparing datasets for training
 > python data/make_dataset.py --filename train.tfrecord  --directory path/to/celeba
+
 # Training networks
 > python main.py --train --filenames train.tfrecord --num_epochs 100 --batch_size 100
+
 # Generate images
 > python main.py --generate --num_images 100
 ```
 
-#### Generated images (128×128, cherry picked)
+### Generated images (128×128, cherry picked)
 ![0](https://user-images.githubusercontent.com/29158616/46405494-67064300-c743-11e8-8d9e-ff9fbb688828.png)
 ![1](https://user-images.githubusercontent.com/29158616/46405495-679ed980-c743-11e8-8b50-b3e9253953b4.png)
 ![2](https://user-images.githubusercontent.com/29158616/46405496-679ed980-c743-11e8-8453-4a5ebe007f55.png)
