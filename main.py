@@ -33,9 +33,9 @@ parser.add_argument("--num_epochs", type=int, default=100, help="number of train
 parser.add_argument("--batch_size", type=int, default=10, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
 parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
-parser.add_argument('--train', action="store_true", help="with training")
-parser.add_argument('--eval', action="store_true", help="with evaluation")
-parser.add_argument('--predict', action="store_true", help="with prediction")
+parser.add_argument('--train', action="store_true", help="training mode")
+parser.add_argument('--generate', action="store_true", help="generation mode")
+parser.add_argument('--num_images', type=int, default=100, help="num of images to generate")
 parser.add_argument('--gpu', type=str, default="0", help="gpu id")
 args = parser.parse_args()
 
@@ -85,13 +85,19 @@ config = tf.ConfigProto(
 
 with tf.Session(config=config) as session:
 
-    if args.train:
+    gan_model.initialize()
 
-        gan_model.initialize()
+    if args.train:
 
         gan_model.train(
             filenames=args.filenames,
             num_epochs=args.num_epochs,
             batch_size=args.batch_size,
             buffer_size=args.buffer_size
+        )
+
+    if args.generate:
+
+        gan_model.generate(
+            num_images=args.num_images
         )

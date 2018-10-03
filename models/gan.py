@@ -232,9 +232,12 @@ class Model(object):
             buffer_size=buffer_size
         )
 
-        for i in itertools.count():
+        feed_dict = {
+            self.batch_size: batch_size,
+            self.training: True
+        }
 
-            feed_dict = {self.batch_size: batch_size}
+        for i in itertools.count():
 
             try:
                 reals, latents = session.run(
@@ -298,11 +301,14 @@ class Model(object):
                     print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
                     start = time.time()
 
-                    fakes = session.run(self.fakes, feed_dict=feed_dict)
-                    images = np.concatenate([reals, fakes], axis=2)
-                    images *= 255.0
+    def generate(self, num_images):
 
-                    for j, image in enumerate(images):
+        session = tf.get_default_session()
 
-                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        cv2.imwrite("generated/image_{}_{}.png".format(i, j), image)
+        for i in range(num_images):
+
+            latents = session.run(self.next_latents, feed_dict={self.batch_size: 1})
+            fake = session.run(self.fakes, feed_dict={self.latents: latents, self.training: False})[0]
+
+            fake = cv2.cvtColor(fake, cv2.COLOR_RGB2BGR)
+            cv2.imwrite("generated/fake_{}.png".format(i), fake * 255.0)
