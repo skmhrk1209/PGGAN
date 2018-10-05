@@ -35,7 +35,6 @@ parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size
 parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
 parser.add_argument('--train', action="store_true", help="training mode")
 parser.add_argument('--generate', action="store_true", help="generation mode")
-parser.add_argument('--num_images', type=int, default=100, help="num of images to generate")
 parser.add_argument('--gpu', type=str, default="0", help="gpu id")
 args = parser.parse_args()
 
@@ -98,6 +97,4 @@ with tf.Session(config=config) as session:
 
     if args.generate:
 
-        gan_model.generate(
-            num_images=args.num_images
-        )
+        gan_model.generate(100)
