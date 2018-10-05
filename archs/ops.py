@@ -98,6 +98,8 @@ def dense(inputs, units, apply_spectral_normalization=False, name="dense", reuse
 
     with tf.variable_scope(name, reuse=reuse):
 
+        # He initialization (http://arxiv.org/abs/1502.01852)
+        # is this best ?
         weight = tf.get_variable(
             name="weight",
             shape=[inputs.shape[1], units],
@@ -137,6 +139,8 @@ def conv2d(inputs, filters, kernel_size, strides, data_format,
 
         in_filters = inputs.shape[1] if channels_first(data_format) else inputs.shape[3]
 
+        # He initialization (http://arxiv.org/abs/1502.01852)
+        # is this best ?
         kernel = tf.get_variable(
             name="kernel",
             shape=kernel_size + [in_filters, filters],
@@ -190,6 +194,8 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
 
         in_filters = inputs.shape[1] if channels_first(data_format) else inputs.shape[3]
 
+        # He initialization (http://arxiv.org/abs/1502.01852)
+        # is this best ?
         kernel = tf.get_variable(
             name="kernel",
             shape=kernel_size + [filters, in_filters],
