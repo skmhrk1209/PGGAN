@@ -373,6 +373,17 @@ class Discriminator(object):
 
             inputs = tf.nn.leaky_relu(inputs)
 
+            inputs = ops.conv2d(
+                inputs=inputs,
+                filters=self.max_filters >> (index - 1),
+                kernel_size=[3, 3],
+                strides=[1, 1],
+                data_format=self.data_format,
+                apply_spectral_normalization=True
+            )
+
+            inputs = tf.nn.leaky_relu(inputs)
+
             return inputs
 
     def color_block(self, inputs, index, training, name="color_block", reuse=None):
