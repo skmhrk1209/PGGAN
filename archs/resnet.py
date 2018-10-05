@@ -32,10 +32,14 @@ def log2(m, n):
 
 class Generator(object):
 
-    def __init__(self, min_resolution, max_resolution, max_filters, data_format):
+    def __init__(self, min_resolution, max_resolution, min_filters, max_filters, data_format):
+
+        if log2(min_resolution, max_resolution) != log2(min_filters, max_filters):
+            raise ValueError("Invalid number of filters")
 
         self.min_resolution = min_resolution
         self.max_resolution = max_resolution
+        self.min_filters = min_filters
         self.max_filters = max_filters
         self.data_format = data_format
 
@@ -233,10 +237,14 @@ class Generator(object):
 
 class Discriminator(object):
 
-    def __init__(self, min_resolution, max_resolution, max_filters, data_format):
+    def __init__(self, min_resolution, max_resolution, min_filters, max_filters, data_format):
+
+        if log2(min_resolution, max_resolution) != log2(min_filters, max_filters):
+            raise ValueError("Invalid number of filters")
 
         self.min_resolution = min_resolution
         self.max_resolution = max_resolution
+        self.min_filters = min_filters
         self.max_filters = max_filters
         self.data_format = data_format
 
