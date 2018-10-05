@@ -3,13 +3,13 @@
 
 ### Usage
 ```
-# Preparing datasets for training
+# Prepare dataset
 > python data/make_dataset.py --filename train.tfrecord  --directory path/to/celeba  
 
-# Training networks
+# Train network
 > python main.py --train --filenames train.tfrecord  
 
-# Generate images
+# Generate image
 > python main.py --generate  
 ```
 
