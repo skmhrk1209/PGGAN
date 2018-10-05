@@ -57,7 +57,7 @@ gan_model = gan.Model(
         max_filters=512,
         data_format=args.data_format
     ),
-    loss_function=gan.Model.LossFunction.WGAN,
+    loss_function=gan.Model.LossFunction.NS_GAN,
     gradient_penalty=gan.Model.GradientPenalty.ONE_CENTERED,
     hyper_parameters=AttrDict(
         latent_size=128,
