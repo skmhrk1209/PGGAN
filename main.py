@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
 parser.add_argument('--filenames', type=str, nargs="+", default=["celeba.tfrecord"], help="tfrecord filenames")
 parser.add_argument("--num_epochs", type=int, default=100, help="number of training epochs")
-parser.add_argument("--batch_size", type=int, default=10, help="batch size")
+parser.add_argument("--batch_size", type=int, default=64, help="batch size")
 parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
 parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
 parser.add_argument('--train', action="store_true", help="training mode")
@@ -58,11 +58,11 @@ gan_model = gan.Model(
         max_filters=512,
         data_format=args.data_format
     ),
-    loss_function=gan.Model.LossFunction.NS_GAN,
-    gradient_penalty=gan.Model.GradientPenalty.ZERO_CENTERED,
+    loss_function=gan.Model.LossFunction.WGAN,
+    gradient_penalty=gan.Model.GradientPenalty.ONE_CENTERED,
     hyper_parameters=AttrDict(
         latent_size=128,
-        gradient_coefficient=10.0,
+        gradient_coefficient=1.0,
         learning_rate=0.0002,
         beta1=0.5,
         beta2=0.999,
