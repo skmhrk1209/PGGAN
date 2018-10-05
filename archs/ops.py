@@ -103,7 +103,9 @@ def dense(inputs, units, apply_spectral_normalization=False, name="dense", reuse
             shape=[inputs.shape[1], units],
             dtype=tf.float32,
             initializer=tf.variance_scaling_initializer(
-                distribution="truncated_normal"
+                scale=2.0,
+                mode="fan_in",
+                distribution="normal"
             ),
             trainable=True
         )
@@ -140,7 +142,9 @@ def conv2d(inputs, filters, kernel_size, strides, data_format,
             shape=kernel_size + [in_filters, filters],
             dtype=tf.float32,
             initializer=tf.variance_scaling_initializer(
-                distribution="truncated_normal"
+                scale=2.0,
+                mode="fan_in",
+                distribution="normal"
             ),
             trainable=True
         )
@@ -191,7 +195,9 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
             shape=kernel_size + [filters, in_filters],
             dtype=tf.float32,
             initializer=tf.variance_scaling_initializer(
-                distribution="truncated_normal"
+                scale=2.0,
+                mode="fan_in",
+                distribution="normal"
             ),
             trainable=True
         )
