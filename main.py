@@ -61,10 +61,10 @@ gan_model = gan.Model(
     gradient_penalty=gan.Model.GradientPenalty.ONE_CENTERED,
     hyper_parameters=AttrDict(
         latent_size=128,
-        gradient_coefficient=10.0,
-        learning_rate=0.001,
-        beta1=0.0,
-        beta2=0.99,
+        gradient_coefficient=1.0,
+        learning_rate=0.0002,
+        beta1=0.5,
+        beta2=0.999,
         coloring_index_fn=(
             lambda global_step:
                 global_step / 100000.0 + 1.0
