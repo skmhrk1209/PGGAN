@@ -158,14 +158,15 @@ class Generator(object):
 
     def dense_block(self, inputs, index, training, name="dense_block", reuse=None):
 
-        with tf.variable_scope("dense_block", reuse=None):
+        with tf.variable_scope(name, reuse=None):
 
             resolution = self.min_resolution << index
             filters = self.max_filters >> index
 
             inputs = ops.dense(
                 inputs=inputs,
-                units=resolution * resolution * filters
+                units=resolution * resolution * filters,
+                name="dense_0"
             )
 
             inputs = tf.reshape(
@@ -197,7 +198,8 @@ class Generator(object):
                 normalization=ops.batch_normalization,
                 activation=tf.nn.relu,
                 data_format=self.data_format,
-                training=training
+                training=training,
+                name="residual_block_0"
             )
 
             return inputs
@@ -209,7 +211,8 @@ class Generator(object):
             inputs = ops.batch_normalization(
                 inputs=inputs,
                 data_format=self.data_format,
-                training=training
+                training=training,
+                name="batch_normalization_0"
             )
 
             inputs = tf.nn.relu(inputs)
@@ -219,7 +222,8 @@ class Generator(object):
                 filters=3,
                 kernel_size=[3, 3],
                 strides=[1, 1],
-                data_format=self.data_format
+                data_format=self.data_format,
+                name="conv2d_0"
             )
 
             inputs = tf.nn.sigmoid(inputs)
@@ -359,7 +363,8 @@ class Discriminator(object):
             inputs = ops.dense(
                 inputs=inputs,
                 units=1,
-                apply_spectral_normalization=True
+                apply_spectral_normalization=True,
+                name="dense_0"
             )
 
             return inputs
@@ -372,11 +377,12 @@ class Discriminator(object):
                 inputs=inputs,
                 filters=self.max_filters >> (index - 1),
                 strides=[1, 1],
-                normalization=None,
-                activation=tf.nn.relu,
                 data_format=self.data_format,
+                apply_spectral_normalization=True,
+                normalization=None,
                 training=training,
-                apply_spectral_normalization=True
+                activation=tf.nn.relu,
+                name="residual_block_0"
             )
 
             inputs = ops.downsampling2d(
@@ -397,7 +403,8 @@ class Discriminator(object):
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 data_format=self.data_format,
-                apply_spectral_normalization=True
+                apply_spectral_normalization=True,
+                name="conv2d_0"
             )
 
             inputs = tf.nn.leaky_relu(inputs)

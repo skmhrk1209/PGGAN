@@ -6,12 +6,30 @@ import tensorflow as tf
 import numpy as np
 
 
+def channels_first(data_format):
+
+    return data_format == "channels_first"
+
+
+def channel_axis(data_format):
+
+    return 1 if channels_first(data_format) else 3
+
+
+def space_axes(data_format):
+
+    return [2, 3] if channels_first(data_format) else [1, 2]
+
+
+def data_format_abbr(data_format):
+
+    return "NCHW" if channels_first(data_format) else "NHWC"
+
+
 def spectral_normalization(input, name="spectral_normalization", reuse=None):
     ''' spectral normalization
-
         [Spectral Normalization for Generative Adversarial Networks]
         (https://arxiv.org/pdf/1802.05957.pdf)
-
         this implementation is from google
         (https://github.com/google/compare_gan/blob/master/compare_gan/src/gans/ops.py)
     '''
@@ -73,7 +91,7 @@ def spectral_normalization(input, name="spectral_normalization", reuse=None):
         return w_tensor_normalized
 
 
-def dense(inputs, units, name="dense", reuse=None, apply_spectral_normalization=False):
+def dense(inputs, units, apply_spectral_normalization=False, name="dense", reuse=None):
     ''' linear layer for spectral normalization
         for weight normalization, use variable instead of tf.layers.dense
     '''
@@ -84,16 +102,15 @@ def dense(inputs, units, name="dense", reuse=None, apply_spectral_normalization=
             name="weight",
             shape=[inputs.shape[1], units],
             dtype=tf.float32,
-            initializer=tf.variance_scaling_initializer(),
+            initializer=tf.variance_scaling_initializer(
+                distribution="truncated_normal"
+            ),
             trainable=True
         )
 
         if apply_spectral_normalization:
 
-            weight = spectral_normalization(
-                input=weight,
-                name="spectral_normalization"
-            )
+            weight = spectral_normalization(weight)
 
         bias = tf.get_variable(
             name="bias",
@@ -109,40 +126,37 @@ def dense(inputs, units, name="dense", reuse=None, apply_spectral_normalization=
 
 
 def conv2d(inputs, filters, kernel_size, strides, data_format,
-           name="conv2d", reuse=None, apply_spectral_normalization=False):
+           apply_spectral_normalization=False, name="conv2d", reuse=None):
     ''' convolution layer for spectral normalization
         for weight normalization, use variable instead of tf.layers.conv2d
     '''
 
     with tf.variable_scope(name, reuse=reuse):
 
-        data_format_abbr = "NCHW" if data_format == "channels_first" else "NHWC"
-
-        in_filters = inputs.shape[1] if data_format_abbr == "NCHW" else inputs.shape[3]
+        in_filters = inputs.shape[1] if channels_first(data_format) else inputs.shape[3]
 
         kernel = tf.get_variable(
             name="kernel",
             shape=kernel_size + [in_filters, filters],
             dtype=tf.float32,
-            initializer=tf.variance_scaling_initializer(),
+            initializer=tf.variance_scaling_initializer(
+                distribution="truncated_normal"
+            ),
             trainable=True
         )
 
         if apply_spectral_normalization:
 
-            kernel = spectral_normalization(
-                input=kernel,
-                name="spectral_normalization"
-            )
+            kernel = spectral_normalization(kernel)
 
-        strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
+        strides = [1] + [1] + strides if channels_first(data_format) else [1] + strides + [1]
 
         inputs = tf.nn.conv2d(
             input=inputs,
             filter=kernel,
             strides=strides,
             padding="SAME",
-            data_format=data_format_abbr
+            data_format=data_format_abbr(data_format)
         )
 
         bias = tf.get_variable(
@@ -156,43 +170,40 @@ def conv2d(inputs, filters, kernel_size, strides, data_format,
         inputs = tf.nn.bias_add(
             value=inputs,
             bias=bias,
-            data_format=data_format_abbr
+            data_format=data_format_abbr(data_format)
         )
 
         return inputs
 
 
 def deconv2d(inputs, filters, kernel_size, strides, data_format,
-             name="deconv2d", reuse=None, apply_spectral_normalization=False):
+             apply_spectral_normalization=False, name="deconv2d", reuse=None):
     ''' deconvolution layer for spectral normalization
         for weight normalization, use variable instead of tf.layers.conv2d_transpose
     '''
 
     with tf.variable_scope(name, reuse=reuse):
 
-        data_format_abbr = "NCHW" if data_format == "channels_first" else "NHWC"
-
-        in_filters = inputs.shape[1] if data_format_abbr == "NCHW" else inputs.shape[3]
+        in_filters = inputs.shape[1] if channels_first(data_format) else inputs.shape[3]
 
         kernel = tf.get_variable(
             name="kernel",
             shape=kernel_size + [filters, in_filters],
             dtype=tf.float32,
-            initializer=tf.variance_scaling_initializer(),
+            initializer=tf.variance_scaling_initializer(
+                distribution="truncated_normal"
+            ),
             trainable=True
         )
 
         if apply_spectral_normalization:
 
-            kernel = spectral_normalization(
-                input=kernel,
-                name="spectral_normalization"
-            )
+            kernel = spectral_normalization(kernel)
 
-        strides = [1] + [1] + strides if data_format_abbr == "NCHW" else [1] + strides + [1]
+        strides = [1] + [1] + strides if channels_first(data_format) else [1] + strides + [1]
 
         output_shape = tf.shape(inputs) * strides
-        output_shape = (tf.concat([output_shape[0:1], [filters], output_shape[2:4]], axis=0) if data_format_abbr == "NCHW" else
+        output_shape = (tf.concat([output_shape[0:1], [filters], output_shape[2:4]], axis=0) if channels_first(data_format) else
                         tf.concat([output_shape[0:1], output_shape[1:3], [filters]], axis=0))
 
         inputs = tf.nn.conv2d_transpose(
@@ -201,7 +212,7 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
             output_shape=output_shape,
             strides=strides,
             padding="SAME",
-            data_format=data_format_abbr
+            data_format=data_format_abbr(data_format)
         )
 
         bias = tf.get_variable(
@@ -215,14 +226,14 @@ def deconv2d(inputs, filters, kernel_size, strides, data_format,
         inputs = tf.nn.bias_add(
             value=inputs,
             bias=bias,
-            data_format=data_format_abbr
+            data_format=data_format_abbr(data_format)
         )
 
         return inputs
 
 
-def residual_block(inputs, filters, strides, normalization, activation, data_format, training,
-                   name="residual_block", reuse=None, apply_spectral_normalization=False):
+def residual_block(inputs, filters, strides, data_format, apply_spectral_normalization=False,
+                   normalization=None, training=None, activation=None, name="residual_block", reuse=None):
     ''' preactivation building residual block for spectral normalization
 
         normalization then activation then convolution as described by:
@@ -251,8 +262,8 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[1, 1],
             strides=strides,
             data_format=data_format,
-            name="projection",
-            apply_spectral_normalization=apply_spectral_normalization
+            apply_spectral_normalization=apply_spectral_normalization,
+            name="projection"
         )
 
         inputs = conv2d(
@@ -261,8 +272,8 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[3, 3],
             strides=strides,
             data_format=data_format,
-            name="conv2d_0",
-            apply_spectral_normalization=apply_spectral_normalization
+            apply_spectral_normalization=apply_spectral_normalization,
+            name="conv2d_0"
         )
 
         if normalization:
@@ -284,8 +295,8 @@ def residual_block(inputs, filters, strides, normalization, activation, data_for
             kernel_size=[3, 3],
             strides=[1, 1],
             data_format=data_format,
-            name="conv2d_1",
-            apply_spectral_normalization=apply_spectral_normalization
+            apply_spectral_normalization=apply_spectral_normalization,
+            name="conv2d_1"
         )
 
         inputs += shortcut
@@ -371,7 +382,21 @@ def global_average_pooling2d(inputs, data_format):
 
     return tf.reduce_mean(
         input_tensor=inputs,
-        axis=[2, 3] if data_format == "channels_first" else [1, 2]
+        axis=space_axes(data_format)
+    )
+
+
+def batch_normalization(inputs, data_format, training, name="batch_normalization", reuse=None):
+
+    return tf.contrib.layers.batch_norm(
+        inputs=inputs,
+        center=True,
+        scale=True,
+        is_training=training,
+        trainable=True,
+        data_format=data_format_abbr(data_format),
+        scope=name,
+        reuse=reuse
     )
 
 
@@ -383,7 +408,7 @@ def layer_normalization(inputs, data_format, training, name="layer_normalization
         scale=True,
         trainable=True,
         begin_norm_axis=1,
-        begin_params_axis=1 if data_format == "channels_first" else 3,
+        begin_params_axis=channel_axis(data_format),
         scope=name,
         reuse=reuse
     )
@@ -396,21 +421,7 @@ def instance_normalization(inputs, data_format, training, name="instance_normali
         center=True,
         scale=True,
         trainable=True,
-        data_format="NCHW" if data_format == "channels_first" else "NHWC",
-        scope=name,
-        reuse=reuse
-    )
-
-
-def batch_normalization(inputs, data_format, training, name="batch_normalization", reuse=None):
-
-    return tf.contrib.layers.batch_norm(
-        inputs=inputs,
-        center=True,
-        scale=True,
-        is_training=training,
-        trainable=True,
-        data_format="NCHW" if data_format == "channels_first" else "NHWC",
+        data_format=data_format_abbr(data_format),
         scope=name,
         reuse=reuse
     )
