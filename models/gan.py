@@ -11,6 +11,10 @@ import time
 import cv2
 
 
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+
 class Model(object):
 
     class LossFunction:
@@ -117,12 +121,12 @@ class Model(object):
                 raise ValueError("Invalid loss function")
 
             #========================================================================#
-            # interpolation for gradient penalty
+            # linear interpolation for gradient penalty
             #========================================================================#
-            self.interpolate_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1])
-            self.interpolates = self.reals + (self.fakes - self.reals) * self.interpolate_coefficients
-            self.interpolate_logits = discriminator(
-                inputs=self.interpolates,
+            self.lerp_coefficients = tf.random_uniform(shape=[self.batch_size, 1, 1, 1])
+            self.lerped = lerp(self.reals, self.fakes, self.lerp_coefficients)
+            self.lerped_logits = discriminator(
+                inputs=self.lerped,
                 training=self.training,
                 coloring_index=self.coloring_index,
                 name="discriminator",
@@ -135,7 +139,7 @@ class Model(object):
             # to avoid NaN exception, add epsilon inside sqrt()
             # (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
             #========================================================================#
-            self.gradients = tf.gradients(ys=self.interpolate_logits, xs=self.interpolates)[0]
+            self.gradients = tf.gradients(ys=self.lerped_logits, xs=self.lerped)[0]
             self.slopes = tf.sqrt(tf.reduce_sum(tf.square(self.gradients), axis=[1, 2, 3]) + 0.0001)
 
             if gradient_penalty == Model.GradientPenalty.ZERO_CENTERED:
