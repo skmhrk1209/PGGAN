@@ -97,4 +97,6 @@ with tf.Session(config=config) as session:
 
     if args.generate:
 
-        gan_model.generate(100)
+        gan_model.generate(
+            batch_size=args.batch_size
+        )
