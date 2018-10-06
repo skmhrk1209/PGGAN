@@ -22,7 +22,7 @@ from __future__ import print_function
 import tensorflow as tf
 import argparse
 from models import gan
-from archs import dcgan, resnet
+from networks import dcgan, resnet
 from data import celeba
 from utils.attr_dict import AttrDict
 
