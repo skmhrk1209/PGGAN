@@ -15,10 +15,6 @@
 # (https://arxiv.org/pdf/1807.04720.pdf)
 #=================================================================================================#
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 import argparse
 from models import gan

@@ -7,7 +7,6 @@
 
 import tensorflow as tf
 import numpy as np
-import collections
 from . import ops
 
 
