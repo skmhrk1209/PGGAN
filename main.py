@@ -8,7 +8,7 @@
 # [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
 # (https://arxiv.org/pdf/1710.10196.pdf)
 #
-# tune up as described by
+# tuned up as described by
 # [Are GANs Created Equal? A Large-Scale Study]
 # (https://arxiv.org/pdf/1711.10337.pdf)
 # [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
