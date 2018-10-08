@@ -334,15 +334,3 @@ class Model(object):
                     stop = time.time()
                     print("{} saved ({:.2f} sec)".format(checkpoint, stop - start))
                     start = time.time()
-
-    def generate(self, batch_size):
-
-        session = tf.get_default_session()
-
-        latents = session.run(self.next_latents, feed_dict={self.batch_size: batch_size})
-        fakes = session.run(self.fakes, feed_dict={self.latents: latents, self.training: False})
-
-        for i, fake in enumerate(fakes):
-
-            fake = cv2.cvtColor(fake, cv2.COLOR_RGB2BGR)
-            cv2.imwrite("generated/fake_{}.png".format(i), fake * 255.0)
