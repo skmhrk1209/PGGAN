@@ -3,3 +3,8 @@ __pycache__/
 .DS_Store
 .vscode/
 celeba_dcgan_model/
+model_1_celebahq128_resnet19/
+model_2_celebahq128_resnet19/
+model_5_celebahq128_resnet19/
+model_6_celebahq128_resnet19/
+model_9_celebahq128_resnet19/
