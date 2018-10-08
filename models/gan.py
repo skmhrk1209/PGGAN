@@ -29,8 +29,16 @@ class Model(object):
             self.discriminator = discriminator
             self.hyper_parameters = hyper_parameters
 
-            self.batch_size = tf.placeholder(dtype=tf.int32, shape=[])
-            self.training = tf.placeholder(dtype=tf.bool, shape=[])
+            self.batch_size = tf.placeholder(
+                dtype=tf.int32,
+                shape=[],
+                name="batch_size"
+            )
+            self.training = tf.placeholder(
+                dtype=tf.bool,
+                shape=[],
+                name="training"
+            )
 
             self.generator_global_step = tf.get_variable(
                 name="generator_global_step",
@@ -52,16 +60,30 @@ class Model(object):
             )
 
             self.next_reals = self.dataset.get_next()
-            self.next_latents = tf.random_normal(shape=[self.batch_size, self.hyper_parameters.latent_size])
+            self.next_latents = tf.random_normal(
+                shape=[self.batch_size, self.hyper_parameters.latent_size]
+            )
 
-            self.reals = tf.placeholder(dtype=tf.float32, shape=self.next_reals.shape)
-            self.latents = tf.placeholder(dtype=tf.float32, shape=[None, self.hyper_parameters.latent_size])
+            self.reals = tf.placeholder(
+                dtype=tf.float32,
+                shape=self.next_reals.shape,
+                name="reals"
+            )
+            self.latents = tf.placeholder(
+                dtype=tf.float32,
+                shape=[None, self.hyper_parameters.latent_size],
+                name="latents"
+            )
 
             self.fakes = generator(
                 inputs=self.latents,
                 coloring_index=self.coloring_index,
                 training=self.training,
                 name="generator"
+            )
+            self.fakes = tf.identity(
+                input=self.fakes,
+                name="fakes"
             )
 
             self.real_logits = discriminator(
@@ -70,12 +92,21 @@ class Model(object):
                 training=self.training,
                 name="discriminator"
             )
+            self.real_logits = tf.identity(
+                input=self.real_logits,
+                name="real_logits"
+            )
+
             self.fake_logits = discriminator(
                 inputs=self.fakes,
                 coloring_index=self.coloring_index,
                 training=self.training,
                 name="discriminator",
                 reuse=True
+            )
+            self.fake_logits = tf.identity(
+                input=self.fake_logits,
+                name="fake_logits"
             )
 
             #========================================================================#
@@ -249,10 +280,6 @@ class Model(object):
                 print("training ended")
                 break
 
-            else:
-                if reals.shape[0] != batch_size:
-                    break
-
             feed_dict.update({
                 self.reals: reals,
                 self.latents: latents
@@ -263,21 +290,21 @@ class Model(object):
                 feed_dict=feed_dict
             )
 
-            if i % 100 == 0:
+            generator_global_step, discriminator_global_step = session.run(
+                [self.generator_global_step, self.discriminator_global_step]
+            )
 
-                generator_global_step, generator_loss = session.run(
-                    [self.generator_global_step, self.generator_loss],
+            if generator_global_step % 100 == 0:
+
+                generator_loss, discriminator_loss = session.run(
+                    [self.generator_loss, self.discriminator_loss],
                     feed_dict=feed_dict
                 )
+
                 print("global_step: {}, generator_loss: {:.2f}".format(
                     generator_global_step,
                     generator_loss
                 ))
-
-                discriminator_global_step, discriminator_loss = session.run(
-                    [self.discriminator_global_step, self.discriminator_loss],
-                    feed_dict=feed_dict
-                )
                 print("global_step: {}, discriminator_loss: {:.2f}".format(
                     discriminator_global_step,
                     discriminator_loss
@@ -289,12 +316,18 @@ class Model(object):
                 summary = session.run(self.summary, feed_dict=feed_dict)
                 writer.add_summary(summary, global_step=generator_global_step)
 
-                if i % 100000 == 0:
+                if generator_global_step % 100000 == 0:
 
                     checkpoint = self.saver.save(
                         sess=session,
                         save_path=os.path.join(self.name, "model.ckpt"),
                         global_step=generator_global_step
+                    )
+
+                    tf.train.write_graph(
+                        graph_or_graph_def=session.graph.as_graph_def(),
+                        logdir=self.name,
+                        name="graph.pbtxt"
                     )
 
                     stop = time.time()
