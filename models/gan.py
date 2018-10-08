@@ -327,7 +327,8 @@ class Model(object):
                     tf.train.write_graph(
                         graph_or_graph_def=session.graph.as_graph_def(),
                         logdir=self.name,
-                        name="graph.pbtxt"
+                        name="graph.pb",
+                        as_text=False
                     )
 
                     stop = time.time()
