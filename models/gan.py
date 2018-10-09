@@ -163,6 +163,7 @@ class Model(object):
             # 1. zero-centered gradient penalty (https://openreview.net/pdf?id=ByxPYjC5KQ)
             # -> NOT EFFECTIVE FOR NOW
             # 2. one-centered gradient penalty (https://arxiv.org/pdf/1704.00028.pdf)
+            #
             # to avoid NaN exception, add epsilon inside sqrt()
             # (https://github.com/tdeboissiere/DeepLearningImplementations/issues/68)
             #========================================================================#
