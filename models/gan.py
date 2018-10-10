@@ -158,6 +158,7 @@ class Model(object):
                 name="discriminator",
                 reuse=True
             )
+            
             #========================================================================#
             # two types of gradient penalty
             # 1. zero-centered gradient penalty (https://openreview.net/pdf?id=ByxPYjC5KQ)

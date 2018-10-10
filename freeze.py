@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow_hub as hub
 import numpy as np
 import os
+from tensorflow.python.tools import freeze_graph
 
 modules = [
     "https://tfhub.dev/google/compare_gan/model_1_celebahq128_resnet19/1",
@@ -22,7 +23,7 @@ for module in modules[:-1]:
     with tf.Session() as session:
 
         session.run(tf.global_variables_initializer())
-        print(session.run(fakes, feed_dict={latents: np.random.uniform(low=-1, high=1, size=[64, 128])}))
+        session.run(fakes, feed_dict={latents: np.random.uniform(low=-1, high=1, size=[64, 128])})
 
         checkpoint = tf.train.Saver().save(
             sess=session,
@@ -34,6 +35,19 @@ for module in modules[:-1]:
             logdir=module.split("/")[-2],
             name="graph.pbtxt",
             as_text=True
+        )
+
+        freeze_graph.freeze_graph(
+            input_graph=os.path.join(module.split("/")[-2], "graph.pbtxt"),
+            input_saver="",
+            input_binary=False,
+            input_checkpoint=os.path.join(module.split("/")[-2], "model.ckpt"),
+            output_node_names="fakes",
+            restore_op_name="",
+            filename_tensor_name="",
+            output_graph=os.path.join(module.split("/")[-2], "frozen_graph.pb"),
+            clear_devices=True,
+            initializer_nodes=""
         )
 
 for module in modules[-1:]:
@@ -46,7 +60,7 @@ for module in modules[-1:]:
     with tf.Session() as session:
 
         session.run(tf.global_variables_initializer())
-        print(session.run(fakes, feed_dict={latents: np.random.normal(loc=0, scale=1, size=[16, 512])}))
+        session.run(fakes, feed_dict={latents: np.random.normal(loc=0, scale=1, size=[16, 512])})
 
         checkpoint = tf.train.Saver().save(
             sess=session,
@@ -58,4 +72,17 @@ for module in modules[-1:]:
             logdir=module.split("/")[-2],
             name="graph.pbtxt",
             as_text=True
+        )
+
+        freeze_graph.freeze_graph(
+            input_graph=os.path.join(module.split("/")[-2], "graph.pbtxt"),
+            input_saver="",
+            input_binary=False,
+            input_checkpoint=os.path.join(module.split("/")[-2], "model.ckpt"),
+            output_node_names="fakes",
+            restore_op_name="",
+            filename_tensor_name="",
+            output_graph=os.path.join(module.split("/")[-2], "frozen_graph.pb"),
+            clear_devices=True,
+            initializer_nodes=""
         )
