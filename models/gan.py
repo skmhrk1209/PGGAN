@@ -19,7 +19,7 @@ class Model(object):
         ZERO_CENTERED, ONE_CENTERED = range(2)
 
     def __init__(self, dataset, generator, discriminator, loss_function,
-                 gradient_penalty, hyper_parameters, name="gan", reuse=None):
+                 gradient_penalty, hyper_params, name="gan", reuse=None):
 
         with tf.variable_scope(name, reuse=reuse):
 
@@ -27,7 +27,7 @@ class Model(object):
             self.dataset = dataset
             self.generator = generator
             self.discriminator = discriminator
-            self.hyper_parameters = hyper_parameters
+            self.hyper_parameters = hyper_params
 
             self.batch_size = tf.placeholder(
                 dtype=tf.int32,
