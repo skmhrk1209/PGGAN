@@ -1,17 +1,7 @@
-## Progressive Growing GAN
-### TensorFlow implementation of ["Progressive Growing of GANs for Improved Quality, Stability, and Variation"](https://arxiv.org/pdf/1710.10196.pdf)
+## PGGAN: TensorFlow implementation of "Progressive Growing of GANs for Improved Quality, Stability, and Variation"
 
-### Usage
-```
-# Prepare dataset
-> python data/make_dataset.py --filename train.tfrecord  --directory path/to/celeba  
-
-# Train network
-> python main.py --train --filenames train.tfrecord  
-
-# Generate image
-> python main.py --generate  
-```
+## Original paper 
+* [Progressive Growing of GANs for Improved Quality, Stability, and Variation](https://arxiv.org/pdf/1710.10196.pdf)
 
 ### Generated images (128×128, cherry picked)
 ![0](https://user-images.githubusercontent.com/29158616/46405494-67064300-c743-11e8-8d9e-ff9fbb688828.png)
