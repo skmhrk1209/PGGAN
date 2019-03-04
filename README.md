@@ -1,6 +1,6 @@
 ## PGGAN: TensorFlow implementation of "Progressive Growing of GANs for Improved Quality, Stability, and Variation"
 
-## Original paper 
+### Original paper 
 * [Progressive Growing of GANs for Improved Quality, Stability, and Variation](https://arxiv.org/pdf/1710.10196.pdf)
 
 ### Generated images (128×128, cherry picked)
