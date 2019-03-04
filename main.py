@@ -1,93 +1,83 @@
 #=================================================================================================#
-# Implementation of Progressive Growing GAN
-#
-# 2018/10/01 Hiroki Sakuma
-# (https://github.com/skmhrk1209/PGGAN)
-#
-# original paper
+# TensorFlow implementation of PGGAN
 # [Progressive Growing of GANs for Improved Quality, Stability, and Variation]
 # (https://arxiv.org/pdf/1710.10196.pdf)
-#
-# tuned up as described by
-# [Are GANs Created Equal? A Large-Scale Study]
-# (https://arxiv.org/pdf/1711.10337.pdf)
-# [The GAN Landscape: Losses, Architectures, Regularization, and Normalization]
-# (https://arxiv.org/pdf/1807.04720.pdf)
 #=================================================================================================#
 
 import tensorflow as tf
+import numpy as np
 import argparse
-from models import gan
-from networks import dcgan, resnet
-from data import celeba
-from utils import attr_dict
+import functools
+import pickle
+from dataset import celeba_input_fn
+from model import GAN
+from network import PGGAN
+from param import Param
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_dir", type=str, default="celeba_dcgan_model", help="model directory")
-parser.add_argument('--filenames', type=str, nargs="+", default=["celeba.tfrecord"], help="tfrecord filenames")
-parser.add_argument("--num_epochs", type=int, default=100, help="number of training epochs")
-parser.add_argument("--batch_size", type=int, default=64, help="batch size")
-parser.add_argument("--buffer_size", type=int, default=100000, help="buffer size to shuffle dataset")
-parser.add_argument('--data_format', type=str, choices=["channels_first", "channels_last"], default="channels_last", help="data_format")
-parser.add_argument('--train', action="store_true", help="with training")
-parser.add_argument('--gpu', type=str, default="0", help="gpu id")
+parser.add_argument("--model_dir", type=str, default="celeba_style_gan_model")
+parser.add_argument('--filenames', type=str, nargs="+", default=["celeba_train.tfrecord"])
+parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--total_steps", type=int, default=1000000)
+parser.add_argument("--train", action="store_true")
+parser.add_argument("--gpu", type=str, default="0")
 args = parser.parse_args()
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-gan_model = gan.Model(
-    dataset=celeba.Dataset(
-        image_size=[128, 128],
-        data_format=args.data_format
-    ),
-    generator=dcgan.Generator(
-        min_resolution=4,
-        max_resolution=128,
-        min_filters=16,
-        max_filters=512,
-        data_format=args.data_format,
-    ),
-    discriminator=dcgan.Discriminator(
-        min_resolution=4,
-        max_resolution=128,
-        min_filters=16,
-        max_filters=512,
-        data_format=args.data_format
-    ),
-    loss_function=gan.Model.LossFunction.NS_GAN,
-    gradient_penalty=gan.Model.GradientPenalty.ONE_CENTERED,
-    hyper_params=attr_dict.AttrDict(
-        latent_size=128,
-        gradient_coefficient=1.0,
-        learning_rate=0.0002,
-        beta1=0.5,
-        beta2=0.999,
-        coloring_index_fn=(
-            lambda global_step:
-                global_step / 100000.0 + 1.0
-        )
-    ),
-    name=args.model_dir
-)
+with open("attr_counts.pickle", "rb") as file:
+    attr_counts = pickle.load(file)
 
-config = tf.ConfigProto(
-    gpu_options=tf.GPUOptions(
-        visible_device_list=args.gpu,
-        allow_growth=True
-    ),
-    log_device_placement=False,
-    allow_soft_placement=True
-)
+with tf.Graph().as_default():
 
-with tf.Session(config=config) as session:
+    tf.set_random_seed(0)
 
-    gan_model.initialize()
+    pggan = PGGAN(
+        min_resolution=[4, 4],
+        max_resolution=[256, 256],
+        min_channels=16,
+        max_channels=512
+    )
 
-    if args.train:
-
-        gan_model.train(
+    gan = GAN(
+        discriminator=pggan.discriminator,
+        generator=pggan.generator,
+        real_input_fn=functools.partial(
+            celeba_input_fn,
             filenames=args.filenames,
-            num_epochs=args.num_epochs,
             batch_size=args.batch_size,
-            buffer_size=args.buffer_size
+            num_epochs=None,
+            shuffle=True,
+            image_size=[256, 256]
+        ),
+        fake_input_fn=lambda: (
+            tf.random_normal([args.batch_size, 512]),
+            tf.one_hot(tf.reshape(tf.random.multinomial(
+                logits=tf.log([tf.cast(attr_counts, tf.float32)]),
+                num_samples=args.batch_size
+            ), [args.batch_size]), len(attr_counts))
+        ),
+        hyper_params=Param(
+            discriminator_learning_rate=1e-3,
+            discriminator_beta1=0.0,
+            discriminator_beta2=0.99,
+            generator_learning_rate=1e-3,
+            generator_beta1=0.0,
+            generator_beta2=0.99,
+            r1_gamma=10.0,
+            r2_gamma=0.0
+        ),
+        name=args.model_dir
+    )
+
+    config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            visible_device_list=args.gpu,
+            allow_growth=True
         )
+    )
+
+    with tf.Session(config=config) as session:
+
+        gan.initialize()
+        gan.train(args.total_steps)
