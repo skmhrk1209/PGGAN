@@ -11,19 +11,22 @@ def lerp(a, b, t): return t * a + (1. - t) * b
 
 class PGGAN(object):
 
-    def __init__(self, min_resolution, max_resolution, min_channels, max_channels):
+    def __init__(self, min_resolution, max_resolution, min_channels, max_channels, growing_level):
 
         self.min_resolution = np.asanyarray(min_resolution)
         self.max_resolution = np.asanyarray(max_resolution)
         self.min_channels = min_channels
         self.max_channels = max_channels
+        self.growing_level = growing_level
 
         def log2(x): return 0 if (x == 1).all() else 1 + log2(x >> 1)
 
         self.min_depth = log2(self.min_resolution // self.min_resolution)
         self.max_depth = log2(self.max_resolution // self.min_resolution)
 
-    def generator(self, latents, labels, training, progress, name="ganerator", reuse=None):
+        self.growing_depth = log(1 + ((1 << (self.max_depth + 1)) - 1) * self.growing_level, 2.)
+
+    def generator(self, latents, labels=None, name="generator", reuse=tf.AUTO_REUSE):
 
         def resolution(depth): return self.min_resolution << depth
 
@@ -118,41 +121,36 @@ class PGGAN(object):
 
             if depth == self.min_depth:
                 images = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=high_resolution_images,
                     false_fn=middle_resolution_images
                 )
             elif depth == self.max_depth:
                 images = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=middle_resolution_images,
                     false_fn=lambda: lerp(
                         a=low_resolution_images(),
                         b=middle_resolution_images(),
-                        t=depth - growing_depth
+                        t=depth - self.growing_depth
                     )
                 )
             else:
                 images = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=high_resolution_images,
                     false_fn=lambda: lerp(
                         a=low_resolution_images(),
                         b=middle_resolution_images(),
-                        t=depth - growing_depth
+                        t=depth - self.growing_depth
                     )
                 )
             return images
 
         with tf.variable_scope(name, reuse=reuse):
+            return grow(tf.concat([latents, labels], axis=1) if labels else latents, self.min_depth)
 
-            growing_depth = log((1 << self.min_depth) + progress * ((1 << (self.max_depth + 1)) - (1 << self.min_depth)), 2.)
-
-            latents = tf.concat([latents, labels], axis=1)
-
-            return grow(latents, self.min_depth)
-
-    def discriminator(self, images, labels, training, progress, name="dicriminator", reuse=None):
+    def discriminator(self, images, labels=None, name="discriminator", reuse=tf.AUTO_REUSE):
 
         def resolution(depth): return self.min_resolution << depth
 
@@ -183,23 +181,25 @@ class PGGAN(object):
                         )
                         inputs = tf.nn.leaky_relu(inputs)
                     with tf.variable_scope("logits"):
-                        inputs = dense(
-                            inputs=inputs,
-                            units=labels.shape[1],
-                            use_bias=True,
-                            variance_scale=1,
-                            scale_weight=True
-                        )
-                        # label conditioning from
-                        # [Which Training Methods for GANs do actually Converge?]
-                        # (https://arxiv.org/pdf/1801.04406.pdf)
-                        inputs *= tf.cast(labels, tf.float32)
-                        inputs = tf.reduce_sum(
-                            input_tensor=inputs,
-                            axis=1,
-                            keepdims=True
-                        )
-
+                        if labels:
+                            # label conditioning from
+                            # [Conditional Image Synthesis With Auxiliary Classifier GANs]
+                            # (https://arxiv.org/pdf/1610.09585.pdf)
+                            inputs = dense(
+                                inputs=inputs,
+                                units=labels.shape[1] + 1,
+                                use_bias=True,
+                                variance_scale=1,
+                                scale_weight=True
+                            )
+                        else:
+                            inputs = dense(
+                                inputs=inputs,
+                                units=1,
+                                use_bias=True,
+                                variance_scale=1,
+                                scale_weight=True
+                            )
                 else:
                     with tf.variable_scope("conv"):
                         inputs = conv2d(
@@ -257,34 +257,31 @@ class PGGAN(object):
 
             if depth == self.min_depth:
                 feature_maps = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=high_resolution_feature_maps,
                     false_fn=middle_resolution_feature_maps
                 )
             elif depth == self.max_depth:
                 feature_maps = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=middle_resolution_feature_maps,
                     false_fn=lambda: lerp(
                         a=low_resolution_feature_maps(),
                         b=middle_resolution_feature_maps(),
-                        t=depth - growing_depth
+                        t=depth - self.growing_depth
                     )
                 )
             else:
                 feature_maps = tf.cond(
-                    pred=tf.greater(growing_depth, depth),
+                    pred=tf.greater(self.growing_depth, depth),
                     true_fn=high_resolution_feature_maps,
                     false_fn=lambda: lerp(
                         a=low_resolution_feature_maps(),
                         b=middle_resolution_feature_maps(),
-                        t=depth - growing_depth
+                        t=depth - self.growing_depth
                     )
                 )
             return feature_maps
 
         with tf.variable_scope(name, reuse=reuse):
-
-            growing_depth = log((1 << self.min_depth) + progress * ((1 << (self.max_depth + 1)) - (1 << self.min_depth)), 2.)
-
             return grow(images, self.min_depth)

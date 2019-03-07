@@ -1,6 +1,4 @@
 import tensorflow as tf
-import numpy as np
-import functools
 import os
 
 
@@ -22,10 +20,7 @@ def celeba_input_fn(filenames, batch_size, num_epochs, shuffle, image_size):
         image = tf.transpose(image, [2, 0, 1])
         image = image * 2.0 - 1.0
 
-        label = features["label"]
-        label = tf.cast(label, tf.int32)
-
-        return image, label
+        return image
 
     dataset = tf.data.TFRecordDataset(filenames)
     if shuffle:
