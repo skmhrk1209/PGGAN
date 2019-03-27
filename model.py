@@ -138,8 +138,8 @@ class GAN(object):
         ) as session:
 
             while not session.should_stop():
-                session.run(self.discriminator_train_op, feed_dict={self.training: True})
-                session.run(self.generator_train_op, feed_dict={self.training: True})
+                session.run(self.discriminator_train_op)
+                session.run(self.generator_train_op)
 
     def evaluate(self, model_dir, config):
 
@@ -167,10 +167,7 @@ class GAN(object):
             def generator():
                 while True:
                     try:
-                        yield session.run(
-                            fetches=[self.real_features, self.fake_features],
-                            feed_dict={self.training: False}
-                        )
+                        yield session.run([self.real_features, self.fake_features])
                     except tf.errors.OutOfRangeError:
                         break
 
