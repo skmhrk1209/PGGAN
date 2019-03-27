@@ -3,10 +3,12 @@ import numpy as np
 from ops import *
 
 
-def log(x, base): return tf.log(x) / tf.log(base)
+def log(x, base):
+    return tf.log(x) / tf.log(base)
 
 
-def lerp(a, b, t): return t * a + (1. - t) * b
+def lerp(a, b, t):
+    return t * a + (1 - t) * b
 
 
 class PGGAN(object):
@@ -24,7 +26,7 @@ class PGGAN(object):
         self.min_depth = log2(self.min_resolution // self.min_resolution)
         self.max_depth = log2(self.max_resolution // self.min_resolution)
 
-        self.growing_depth = log(1 + ((1 << (self.max_depth + 1)) - 1) * self.growing_level, 2.)
+        self.growing_depth = log(1 + ((1 << (self.max_depth + 1)) - 1) * self.growing_level, 2.0)
 
     def generator(self, latents, labels=None, name="generator", reuse=tf.AUTO_REUSE):
 
@@ -61,6 +63,7 @@ class PGGAN(object):
                         )
                         inputs = tf.nn.leaky_relu(inputs)
                         inputs = pixel_norm(inputs)
+                    return inputs
                 else:
                     with tf.variable_scope("upscale_conv"):
                         inputs = conv2d_transpose(
@@ -85,7 +88,7 @@ class PGGAN(object):
                         )
                         inputs = tf.nn.leaky_relu(inputs)
                         inputs = pixel_norm(inputs)
-                return inputs
+                    return inputs
 
         def color_block(inputs, depth, reuse=tf.AUTO_REUSE):
             with tf.variable_scope("color_block_{}x{}".format(*resolution(depth)), reuse=reuse):
@@ -180,26 +183,37 @@ class PGGAN(object):
                             scale_weight=True
                         )
                         inputs = tf.nn.leaky_relu(inputs)
-                    with tf.variable_scope("logits"):
-                        if labels:
-                            # label conditioning from
-                            # [Conditional Image Synthesis With Auxiliary Classifier GANs]
-                            # (https://arxiv.org/pdf/1610.09585.pdf)
-                            inputs = dense(
-                                inputs=inputs,
-                                units=labels.shape[1] + 1,
-                                use_bias=True,
-                                variance_scale=1,
-                                scale_weight=True
-                            )
-                        else:
-                            inputs = dense(
+                    if labels is not None:
+                        with tf.variable_scope("adversarial_logits"):
+                            adversarial_logits = dense(
                                 inputs=inputs,
                                 units=1,
                                 use_bias=True,
                                 variance_scale=1,
                                 scale_weight=True
                             )
+                        with tf.variable_scope("classification_logits"):
+                            # label conditioning from
+                            # [Conditional Image Synthesis With Auxiliary Classifier GANs]
+                            # (https://arxiv.org/pdf/1610.09585.pdf)
+                            classification_logits = dense(
+                                inputs=inputs,
+                                units=labels.shape[1],
+                                use_bias=True,
+                                variance_scale=1,
+                                scale_weight=True
+                            )
+                        return adversarial_logits, classification_logits
+                    else:
+                        with tf.variable_scope("logits"):
+                            logits = dense(
+                                inputs=inputs,
+                                units=1,
+                                use_bias=True,
+                                variance_scale=1,
+                                scale_weight=True
+                            )
+                        return logits
                 else:
                     with tf.variable_scope("conv"):
                         inputs = conv2d(
@@ -222,7 +236,7 @@ class PGGAN(object):
                             scale_weight=True
                         )
                         inputs = tf.nn.leaky_relu(inputs)
-                return inputs
+                    return inputs
 
         def color_block(inputs, depth, reuse=tf.AUTO_REUSE):
             with tf.variable_scope("color_block_{}x{}".format(*resolution(depth)), reuse=reuse):
