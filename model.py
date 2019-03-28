@@ -167,7 +167,7 @@ class GAN(object):
             def generator():
                 while True:
                     try:
-                        yield session.run([self.real_features, self.fake_features])
+                        yield session.run([real_features, fake_features])
                     except tf.errors.OutOfRangeError:
                         break
 
